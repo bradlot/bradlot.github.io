@@ -1,0 +1,361 @@
+(() => {
+    const ready = callback => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', callback, { once: true });
+            return;
+        }
+        callback();
+    };
+
+    ready(() => {
+        const dropZone = document.getElementById('viewerDropZone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const clearButton = document.getElementById('clearButton');
+        const dropFileLabel = document.getElementById('viewerFileName');
+        const copyButton = document.getElementById('copyButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const fileList = document.getElementById('fileList');
+        const fileCount = document.getElementById('fileCount');
+        const editor = document.getElementById('fileEditor');
+        const activeFileName = document.getElementById('activeFileName');
+        const activeFileMeta = document.getElementById('activeFileMeta');
+
+        if (!dropZone || !fileInput || !editor) {
+            return;
+        }
+
+        const supportsClipboard = Boolean(navigator.clipboard);
+        const copyButtonLabel = copyButton?.textContent?.trim() || 'Copy text';
+        if (!supportsClipboard && copyButton) {
+            copyButton.disabled = true;
+            copyButton.title = 'Clipboard access is not available in this browser.';
+        }
+
+        const TEXT_EXTENSIONS = [
+            '.txt', '.md', '.markdown', '.mdx', '.tsv', '.json', '.xml', '.html', '.htm', '.css', '.scss',
+            '.sass', '.less', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.py', '.r', '.rb', '.php', '.java',
+            '.c', '.h', '.cpp', '.hpp', '.cs', '.go', '.swift', '.kt', '.sql', '.yaml', '.yml', '.ini', '.cfg',
+            '.conf', '.log', '.sh', '.bash', '.zsh', '.ps1', '.pl', '.lua', '.tex', '.m', '.ipynb', '.properties', '.gradle'
+        ];
+        const TEXT_MIME_ALLOWLIST = [
+            'text/plain',
+            'application/json',
+            'application/javascript',
+            'application/xml',
+            'application/sql',
+            'application/x-sh',
+            'application/x-python-code',
+            'application/x-httpd-php',
+            'application/x-yaml',
+            'application/x-shellscript'
+        ];
+
+        const STORAGE_KEY = 'fileViewerState';
+
+        const loadPersistedState = () => {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || !Array.isArray(parsed.files)) return null;
+                return parsed;
+            } catch (error) {
+                console.warn('Unable to load saved viewer files.', error);
+                return null;
+            }
+        };
+
+        const state = {
+            files: [],
+            activeId: null
+        };
+
+        const persistState = () => {
+            try {
+                const payload = JSON.stringify({ files: state.files, activeId: state.activeId });
+                localStorage.setItem(STORAGE_KEY, payload);
+            } catch (error) {
+                console.warn('Unable to persist viewer files.', error);
+            }
+        };
+
+        const clearPersistedState = () => {
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (error) {
+                console.warn('Unable to clear saved viewer files.', error);
+            }
+        };
+
+        const formatBytes = bytes => {
+            if (!Number.isFinite(bytes)) return '';
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        };
+
+        const formatTimestamp = value => {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        };
+
+        const setStatus = () => {};
+
+        const generateId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+        const restoredState = loadPersistedState();
+        if (restoredState?.files?.length) {
+            state.files = restoredState.files
+                .filter(file => file && typeof file.content === 'string')
+                .map(file => ({
+                    id: file.id || generateId(),
+                    name: file.name || 'Untitled.txt',
+                    size: Number(file.size) || 0,
+                    type: file.type || 'text/plain',
+                    modifiedTime: file.modifiedTime || Date.now(),
+                    content: file.content
+                }));
+            if (state.files.length) {
+                const hasActive = state.files.some(file => file.id === restoredState.activeId);
+                state.activeId = hasActive ? restoredState.activeId : state.files[0].id;
+            }
+        }
+
+        const getActiveFile = () => state.files.find(file => file.id === state.activeId) || null;
+
+        const isTextFile = file => {
+            if (!file) return false;
+            const name = (file.name || '').toLowerCase();
+            const type = (file.type || '').toLowerCase();
+            if (type.startsWith('text/')) return true;
+            if (TEXT_MIME_ALLOWLIST.includes(type)) return true;
+            return TEXT_EXTENSIONS.some(ext => name.endsWith(ext));
+        };
+
+        const renderFileList = () => {
+            if (!fileList || !fileCount) return;
+            if (!state.files.length) {
+                fileList.innerHTML = '<li class="viewer-file-empty">Drop files to populate your library.</li>';
+                fileCount.textContent = '0 files';
+                return;
+            }
+
+            const markup = state.files.map(file => {
+                const isActive = file.id === state.activeId;
+                const details = [formatBytes(file.size)]
+                    .concat(file.modifiedTime ? [`Updated ${formatTimestamp(file.modifiedTime)}`] : [])
+                    .filter(Boolean)
+                    .join(' • ');
+                return `
+                    <li>
+                        <button type="button" role="option" aria-selected="${isActive}" class="viewer-file-button${isActive ? ' active' : ''}" data-file-id="${file.id}">
+                            <span class="viewer-file-name">${file.name}</span>
+                            <span class="viewer-file-meta">${details || 'Plain text'}</span>
+                        </button>
+                    </li>
+                `;
+            }).join('');
+
+            fileList.innerHTML = markup;
+            fileCount.textContent = state.files.length === 1 ? '1 file' : `${state.files.length} files`;
+        };
+
+        const renderActiveFile = () => {
+            const active = getActiveFile();
+            if (!active) {
+                editor.value = 'Drop files on the left to preview them here.';
+                editor.classList.add('viewer-editor-empty');
+                editor.disabled = true;
+                downloadButton && (downloadButton.disabled = true);
+                if (copyButton) {
+                    copyButton.disabled = true;
+                    copyButton.textContent = copyButtonLabel;
+                }
+                activeFileName && (activeFileName.textContent = 'No file selected');
+                activeFileMeta && (activeFileMeta.textContent = 'Drop files on the left to load their contents.');
+                if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
+                renderFileList();
+                return;
+            }
+
+            editor.disabled = false;
+            editor.classList.remove('viewer-editor-empty');
+            editor.value = active.content || '';
+            if (downloadButton) downloadButton.disabled = false;
+            if (copyButton && supportsClipboard) {
+                copyButton.disabled = false;
+                copyButton.textContent = copyButtonLabel;
+            }
+            if (activeFileName) activeFileName.textContent = active.name;
+            if (activeFileMeta) {
+                const parts = [];
+                if (active.size) parts.push(formatBytes(active.size));
+                if (active.type) parts.push(active.type);
+                if (active.modifiedTime) parts.push(`Updated ${formatTimestamp(active.modifiedTime)}`);
+                activeFileMeta.textContent = parts.length ? parts.join(' • ') : 'Editable plain text';
+            }
+            if (dropFileLabel) {
+                const sizeLabel = formatBytes(active.size);
+                dropFileLabel.textContent = sizeLabel ? `${active.name} (${sizeLabel})` : active.name;
+            }
+            renderFileList();
+        };
+
+        const addFileRecord = (file, content) => {
+            const record = {
+                id: generateId(),
+                name: file.name || 'Untitled.txt',
+                size: Number(file.size) || 0,
+                type: file.type || 'text/plain',
+                modifiedTime: file.lastModified || Date.now(),
+                content: typeof content === 'string' ? content : ''
+            };
+            state.files.push(record);
+            state.activeId = record.id;
+            renderActiveFile();
+            setStatus(`Loaded ${state.files.length === 1 ? '1 file' : `${state.files.length} files`}.`);
+            persistState();
+        };
+
+        const readFileAsText = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+            reader.onerror = () => reject(reader.error || new Error('Unable to read file.'));
+            try {
+                reader.readAsText(file, 'UTF-8');
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+        const handleFiles = fileListLike => {
+            const files = Array.from(fileListLike || []);
+            if (!files.length) {
+                setStatus('No files were detected.', true);
+                if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
+                return;
+            }
+
+            let accepted = 0;
+            files.forEach(file => {
+                if (!isTextFile(file)) {
+                    setStatus(`Skipped ${file.name} (unsupported format).`, true);
+                    return;
+                }
+                accepted += 1;
+                readFileAsText(file)
+                    .then(text => addFileRecord(file, text))
+                    .catch(() => setStatus(`Unable to read ${file.name}.`, true));
+            });
+
+            if (!accepted) {
+                setStatus('No supported text files were added.', true);
+                if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
+            }
+        };
+
+        const clearAll = () => {
+            state.files = [];
+            state.activeId = null;
+            fileInput.value = '';
+            renderActiveFile();
+            setStatus('No files uploaded yet.');
+            if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
+            clearPersistedState();
+        };
+
+        const downloadActiveFile = () => {
+            const active = getActiveFile();
+            if (!active || !downloadButton) return;
+            const blob = new Blob([active.content || ''], { type: active.type || 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = active.name || 'file.txt';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+        };
+
+        const copyActiveFile = async () => {
+            const active = getActiveFile();
+            if (!active || !copyButton || !supportsClipboard) return;
+            try {
+                await navigator.clipboard.writeText(active.content || '');
+                copyButton.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyButton.textContent = copyButtonLabel;
+                }, 1200);
+            } catch (error) {
+                console.error('Unable to copy file contents', error);
+                setStatus('Unable to copy to clipboard.', true);
+            }
+        };
+
+        uploadButton?.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', event => {
+            handleFiles(event.target.files);
+            fileInput.value = '';
+        });
+
+        clearButton?.addEventListener('click', clearAll);
+
+        copyButton?.addEventListener('click', copyActiveFile);
+        downloadButton?.addEventListener('click', downloadActiveFile);
+
+        dropZone.addEventListener('dragover', event => {
+            event.preventDefault();
+            dropZone.classList.add('is-dragover');
+        });
+
+        dropZone.addEventListener('dragenter', event => {
+            event.preventDefault();
+            dropZone.classList.add('is-dragover');
+        });
+
+        dropZone.addEventListener('dragleave', event => {
+            event.preventDefault();
+            const related = event.relatedTarget;
+            if (!related || !dropZone.contains(related)) {
+                dropZone.classList.remove('is-dragover');
+            }
+        });
+
+        dropZone.addEventListener('dragend', () => {
+            dropZone.classList.remove('is-dragover');
+        });
+
+        dropZone.addEventListener('drop', event => {
+            event.preventDefault();
+            dropZone.classList.remove('is-dragover');
+            handleFiles(event.dataTransfer?.files);
+        });
+
+        fileList?.addEventListener('click', event => {
+            const button = event.target.closest('[data-file-id]');
+            if (!button) return;
+            state.activeId = button.getAttribute('data-file-id');
+            renderActiveFile();
+            persistState();
+        });
+
+        editor.addEventListener('input', () => {
+            const active = getActiveFile();
+            if (!active) return;
+            active.content = editor.value;
+            persistState();
+        });
+
+        if (state.files.length) {
+            renderActiveFile();
+            setStatus('Restored previous session.');
+        } else {
+            renderActiveFile();
+            setStatus('No files uploaded yet.');
+            clearPersistedState();
+        }
+    });
+})();
