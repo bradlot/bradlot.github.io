@@ -2,12 +2,71 @@ const DEFAULT_STATUS = 'Waiting for input.';
 const PROXY_PREFIX = 'https://r.jina.ai/';
 const HISTORY_STORAGE_KEY = 'apaCitationHistory';
 let siteMappings = {};
+
+const toHostKey = input => {
+    if (input === undefined || input === null) return '';
+    let value = String(input).trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) {
+        try {
+            const { hostname } = new URL(value);
+            value = hostname || value;
+        } catch (error) {
+            value = value.replace(/^https?:\/\//i, '');
+        }
+    }
+    return value.replace(/^www\./i, '').toLowerCase();
+};
+
+const normalizeLabelValue = value => {
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'object') {
+        const best = value.label || value.name || value.title || value.value || value.display;
+        return best ? String(best).trim() : '';
+    }
+    return String(value).trim();
+};
+
+const extractSiteMappingEntries = raw => {
+    const pairs = [];
+    if (!raw) return pairs;
+    const addPair = (host, label) => {
+        if (!host || !label) return;
+        if (!pairs.some(([existing]) => existing === host)) {
+            pairs.push([host, label]);
+        }
+    };
+
+    if (Array.isArray(raw)) {
+        raw.forEach(entry => {
+            if (!entry) return;
+            if (Array.isArray(entry)) {
+                addPair(toHostKey(entry[0]), normalizeLabelValue(entry[1]));
+                return;
+            }
+            if (typeof entry === 'object') {
+                const host = entry.host || entry.hostname || entry.domain || entry.url || entry.site || entry.key;
+                const label = entry.label || entry.name || entry.title || entry.display || entry.value;
+                addPair(toHostKey(host), normalizeLabelValue(label));
+            }
+        });
+        return pairs;
+    }
+
+    if (typeof raw === 'object') {
+        Object.entries(raw).forEach(([key, value]) => {
+            addPair(toHostKey(key), normalizeLabelValue(value));
+        });
+    }
+    return pairs;
+};
+
 const siteMappingsReady = fetch('./assets/data/site-mappings.json')
     .then(response => response.json())
     .then(data => {
-        siteMappings = Object.fromEntries(
-            Object.entries(data || {}).map(([key, value]) => [key.toLowerCase(), value])
-        );
+        const entries = extractSiteMappingEntries(data);
+        siteMappings = Object.fromEntries(entries);
     })
     .catch(() => {
         siteMappings = {};
@@ -1381,25 +1440,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const lookupSiteMapping = host => {
-        if (!host) return '';
-        const lowerHost = host.toLowerCase();
-        if (siteMappings[lowerHost]) return siteMappings[lowerHost];
-        const segments = lowerHost.split('.');
-        for (let i = 1; i < segments.length - 1; i += 1) {
-            const candidate = segments.slice(i).join('.');
-            if (siteMappings[candidate]) return siteMappings[candidate];
-        }
-        return '';
-    };
+const lookupSiteMapping = host => {
+    const normalized = toHostKey(host);
+    if (!normalized) return '';
+    if (siteMappings[normalized]) return siteMappings[normalized];
+    const segments = normalized.split('.');
+    for (let i = 1; i < segments.length - 1; i += 1) {
+        const candidate = segments.slice(i).join('.');
+        if (siteMappings[candidate]) return siteMappings[candidate];
+    }
+    return '';
+};
 
-    const normalizeSiteName = (siteName, url) => {
-        const host = fallbackSiteName(url);
-        const mapped = lookupSiteMapping(host);
-        if (mapped) return mapped;
-        const name = siteName && siteName.trim() ? siteName.trim() : host;
-        return name;
-    };
+const normalizeSiteName = (siteName, url) => {
+    const host = fallbackSiteName(url);
+    const mappedHost = lookupSiteMapping(host);
+    if (mappedHost) return mappedHost;
+    if (siteName) {
+        const mappedProvidedName = lookupSiteMapping(siteName);
+        if (mappedProvidedName) return mappedProvidedName;
+    }
+    return siteName && siteName.trim() ? siteName.trim() : host;
+};
 
     const createManualDefaultsFromArticle = metadata => {
         const siteName = normalizeSiteName(metadata.siteName, metadata.url);
