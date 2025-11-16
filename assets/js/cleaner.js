@@ -273,51 +273,24 @@
         };
     };
 
-    const updateChangeLog = (result, wordCount, flaggedMap) => {
+    const updateChangeLog = (result, wordCount) => {
         if (!elements.changeList) return;
         const entries = [];
         const sorted = result.substitutions.slice().sort((a, b) => b.count - a.count);
-        const flaggedLookup = flaggedMap instanceof Map ? flaggedMap : new Map();
         const seenChars = new Set();
-        const buildFlagBadge = label =>
-            '<span class="flag-icon" aria-hidden="true">&#9873;</span><span class="sr-only">' + (label || 'Character change') + '</span>';
 
         sorted.forEach(item => {
             const per = perHundred(item.count, wordCount);
             const original = '<code>' + escapeHTML(formatChar(item.original)) + '</code> (' + escapeHTML(getCharName(item.original)) + ')';
             const replacement = '<code>' + escapeHTML(formatChar(item.replacement)) + '</code> (' + escapeHTML(getCharName(item.replacement)) + ')';
             const label = item.count === 1 ? 'occurrence' : 'occurrences';
-            const flaggedCount = flaggedLookup.get(item.original) || 0;
-            const isFlagged = flaggedCount > 0;
-            const flagBadge = buildFlagBadge(isFlagged ? 'Flagged character' : 'Character change');
-            let metaText = item.count + ' ' + label + ' (' + per + ' per 100 words)';
-            if (isFlagged) {
-                metaText += ' - flagged ' + flaggedCount + ' time' + (flaggedCount === 1 ? '' : 's');
-            }
+            const metaText = item.count + ' ' + label + ' (' + per + ' per 100 words)';
             seenChars.add(item.original);
             entries.push(
-                '<li class="' + (isFlagged ? 'flagged' : '') + '">' +
-                    '<div class="change-row">' + flagBadge +
+                '<li>' +
+                    '<div class="change-row">' +
                         '<strong>' + original + '</strong>' +
                         '<span class="change-arrow" aria-hidden="true">&rarr;</span>' + replacement +
-                    '</div>' +
-                    '<div class="change-meta">' + metaText + '</div>' +
-                '</li>'
-            );
-        });
-
-        flaggedLookup.forEach((count, char) => {
-            if (!count || seenChars.has(char)) {
-                return;
-            }
-            const formattedChar = '<code>' + escapeHTML(formatChar(char)) + '</code> (' + escapeHTML(getCharName(char)) + ')';
-            const flagBadge = buildFlagBadge('Flagged character');
-            const metaText = 'Flagged character appears ' + count + ' time' + (count === 1 ? '' : 's') + ' in the cleaned text';
-            entries.push(
-                '<li class="flagged">' +
-                    '<div class="change-row">' + flagBadge +
-                        '<strong>' + formattedChar + '</strong>' +
-                        '<span class="change-arrow" aria-hidden="true">&rarr;</span><code>Retained</code>' +
                     '</div>' +
                     '<div class="change-meta">' + metaText + '</div>' +
                 '</li>'
@@ -328,7 +301,7 @@
             const formattingPer = perHundred(result.formattingAdjustments, wordCount);
             entries.push(
                 '<li>' +
-                    '<div class="change-row">' + buildFlagBadge('Formatting change') +
+                    '<div class="change-row">' +
                         '<strong>Formatting normalized</strong>' +
                         '<span class="change-arrow" aria-hidden="true">&rarr;</span><code>Plain text</code></div>' +
                 '<div class="change-meta">' + result.formattingAdjustments + ' characters removed (' + formattingPer + ' per 100 words)</div></li>'
@@ -350,7 +323,7 @@
 
         elements.output.value = result.text;
 
-        updateChangeLog(result, wordCount, result.flagged);
+        updateChangeLog(result, wordCount);
 
     };
 
