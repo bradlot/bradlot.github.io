@@ -31,6 +31,7 @@ const normalizeLabelValue = value => {
 const extractSiteMappingEntries = raw => {
     const pairs = [];
     if (!raw) return pairs;
+
     const addPair = (host, label) => {
         if (!host || !label) return;
         if (!pairs.some(([existing]) => existing === host)) {
@@ -38,27 +39,67 @@ const extractSiteMappingEntries = raw => {
         }
     };
 
-    if (Array.isArray(raw)) {
-        raw.forEach(entry => {
-            if (!entry) return;
-            if (Array.isArray(entry)) {
-                addPair(toHostKey(entry[0]), normalizeLabelValue(entry[1]));
-                return;
-            }
-            if (typeof entry === 'object') {
-                const host = entry.host || entry.hostname || entry.domain || entry.url || entry.site || entry.key;
-                const label = entry.label || entry.name || entry.title || entry.display || entry.value;
-                addPair(toHostKey(host), normalizeLabelValue(label));
-            }
-        });
-        return pairs;
-    }
+    const tryAddStructuredEntry = value => {
+        if (!value || typeof value !== 'object') return false;
+        const host = value.host || value.hostname || value.domain || value.url || value.site || value.key;
+        const label = normalizeLabelValue(value);
+        if (host && label) {
+            addPair(toHostKey(host), label);
+            return true;
+        }
+        return false;
+    };
 
-    if (typeof raw === 'object') {
-        Object.entries(raw).forEach(([key, value]) => {
-            addPair(toHostKey(key), normalizeLabelValue(value));
-        });
-    }
+    const processValue = value => {
+        if (!value) return;
+
+        if (Array.isArray(value)) {
+            value.forEach(entry => {
+                if (!entry) return;
+                if (Array.isArray(entry)) {
+                    if (entry.length >= 2) {
+                        addPair(toHostKey(entry[0]), normalizeLabelValue(entry[1]));
+                    } else if (entry.length === 1) {
+                        processValue(entry[0]);
+                    }
+                    return;
+                }
+                if (typeof entry === 'object') {
+                    if (!tryAddStructuredEntry(entry)) {
+                        processValue(entry);
+                    }
+                }
+            });
+            return;
+        }
+
+        if (typeof value === 'object') {
+            if (tryAddStructuredEntry(value)) return;
+
+            Object.entries(value).forEach(([key, entryValue]) => {
+                if (entryValue === undefined || entryValue === null) return;
+                if (typeof entryValue === 'string' || typeof entryValue === 'number' || typeof entryValue === 'boolean') {
+                    addPair(toHostKey(key), normalizeLabelValue(entryValue));
+                    return;
+                }
+                if (Array.isArray(entryValue)) {
+                    processValue(entryValue);
+                    return;
+                }
+                if (typeof entryValue === 'object') {
+                    if (tryAddStructuredEntry(entryValue)) return;
+                    const derivedLabel = normalizeLabelValue(entryValue);
+                    if (derivedLabel) {
+                        addPair(toHostKey(key), derivedLabel);
+                        return;
+                    }
+                    processValue(entryValue);
+                }
+            });
+        }
+    };
+
+    processValue(raw);
     return pairs;
 };
 
