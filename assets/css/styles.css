@@ -471,10 +471,6 @@ code {
     color: var(--color-fg-muted);
 }
 
-.flag-icon {
-    color: var(--color-danger-fg);
-    font-size: 0.9rem;
-}
 
 .change-arrow {
     color: var(--color-border-strong);
