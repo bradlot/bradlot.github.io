@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>🧼 Text Cleaner</title>
+    <meta name="description" content="Clean AI-generated text.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+    <main class="page" id="top">
+        <section class="workspace container">
+            <article class="panel pin-enabled" data-tool-id="text-cleaner" data-tool-label="Text Cleaner" data-tool-href="cleaner.html">
+                <header class="panel-heading">
+                    <h2>Input</h2>
+                    <p>Paste text and configure the cleaning rules.</p>
+                </header>
+
+                <textarea id="inputText" placeholder="Paste AI-generated text here."></textarea>
+
+                <div class="controls">
+                    <button id="cleanButton" class="primary">Clean Text</button>
+                    <button id="resetButton" class="danger-button" type="button">Reset</button>
+                    <button id="pasteButton" class="ghost">Paste from Clipboard</button>
+                    <button id="copyButton" class="ghost">Copy Cleaned Text</button>
+                </div>
+            </article>
+
+            <article class="panel">
+                <header class="panel-heading">
+                    <h2>Cleaned Output</h2>
+                    <p>Review normalized copy and detected changes.</p>
+                </header>
+
+                <textarea id="outputText" readonly placeholder="Cleaned text appears here."></textarea>
+
+                <div class="analysis-panel">
+                    <div class="analysis-header">
+                        <h3>Character changes</h3>
+                        <p class="analysis-note">Tracked substitutions grouped by original and replacement glyphs so you can quickly review how characters were normalized.</p>
+                    </div>
+                    <ul id="changeList" class="change-list empty">
+                        <li>No substitutions detected yet. Paste text and run the cleaner to see a breakdown.</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="panel rules-card">
+                <header class="panel-heading">
+                    <h2>Normalization Rules</h2>
+                    <p>Toggle enforcement for punctuation, dashes, formatting, and automation.</p>
+                </header>
+                <div class="option-group">
+                    <div class="toggle-grid">
+                        <label class="toggle">
+                            <input type="checkbox" data-option="normalizeQuotes" checked>
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-label">Normalize smart quotes<small>Convert curly quotes and primes to keyboard punctuation.</small></span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" data-option="convertDashes" checked>
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-label">Unify dash variants<small>Replace em/en dashes, figure dashes, and minus signs with standard hyphens.</small></span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" data-option="stripFormatting" checked>
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-label">Flatten formatting<small>Remove extra spacing, invisible glyphs, and non-breaking spaces.</small></span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" data-option="preserveLineBreaks">
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-label">Preserve line breaks<small>Keep paragraph structure while still removing stray indentation.</small></span>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" data-option="autoClean">
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-label">Auto-clean while typing<small>Run normalization automatically with a short delay.</small></span>
+                        </label>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <site-footer></site-footer>
+
+    <script src="./assets/js/cleaner.js" defer></script>
+</body>
+</html>
