@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>🖱️ Clicks</title>
+    <meta name="description" content="Measure your clicks with live tracking and timed runs.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="./assets/js/clicks.js" defer></script>
+
+</head>
+
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container">
+            <article class="panel clicks-panel pin-enabled" data-tool-id="clicks" data-tool-label="Clicks"
+                data-tool-href="clicks.html">
+                <header class="panel-heading">
+                    <h2>Clicks</h2>
+                    <p>Track your live CPS.</p>
+                </header>
+
+                <section class="clicks-layout" aria-label="Clicks tester">
+                    <div class="clicks-main-grid">
+                        <section class="clicks-card clicks-pad-panel" aria-label="Click area">
+                            <header>
+                                <h3>Click zone</h3>
+                                <p>Your session begins with the first click.</p>
+                            </header>
+                            <div class="clicks-pad-shell">
+                                <button type="button" class="clicks-pad" id="clickPad">
+                                    <strong id="padLiveCps">0.00 CPS</strong>
+                                    <span class="clicks-pad-message">Click anywhere inside this area. Mouse clicks only
+                                        are counted.</span>
+                                    <span class="clicks-pad-note">Need a timer? Choose one from the controls and click
+                                        here to start.</span>
+                                </button>
+                            </div>
+                            <section class="clicks-stats" aria-label="Live stats">
+                                <div class="clicks-stat">
+                                    <span class="clicks-stat-label">Live CPS</span>
+                                    <span class="clicks-stat-value" id="liveCps">0.00</span>
+                                </div>
+                                <div class="clicks-stat">
+                                    <span class="clicks-stat-label">Time</span>
+                                    <span class="clicks-stat-value" id="timeStatus">--</span>
+                                </div>
+                                <div class="clicks-stat">
+                                    <span class="clicks-stat-label">Total clicks</span>
+                                    <span class="clicks-stat-value" id="totalClicks">0</span>
+                                </div>
+                                <div class="clicks-stat">
+                                    <span class="clicks-stat-label">Average CPS</span>
+                                    <span class="clicks-stat-value" id="averageCps">--</span>
+                                </div>
+                            </section>
+                        </section>
+
+                        <div class="clicks-right-column">
+                            <div class="clicks-top-row">
+                                <form class="clicks-top-controls" id="clicksForm">
+                                    <div class="timer-buttons" role="group" aria-label="Timer options">
+                                        <button type="button" data-timer-value="0" class="timer-button active">No
+                                            timer</button>
+                                        <button type="button" data-timer-value="5" class="timer-button">5s</button>
+                                        <button type="button" data-timer-value="10" class="timer-button">10s</button>
+                                        <button type="button" data-timer-value="30" class="timer-button">30s</button>
+                                    </div>
+                                </form>
+                                <div class="clicks-actions graph-actions">
+                                    <button type="button" class="danger-button" id="resetClicks" disabled>Reset</button>
+                                </div>
+                            </div>
+                            <p class="clicks-summary" id="clicksSummary" aria-live="polite"></p>
+                            <section class="clicks-card clicks-graph-panel" aria-label="Live chart">
+                                <header>
+                                    <h3>Live chart</h3>
+                                    <p>Watch live fluctuations while you click and see the full run after finishing.</p>
+                                </header>
+                                <canvas id="clicksGraph" width="640" height="280" role="img"
+                                    aria-label="Clicks graph"></canvas>
+                            </section>
+                            <div class="clicks-actions">
+                                <button type="button" class="secondary" id="saveReport" disabled>Save report</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </article>
+        </section>
+    </main>
+
+    <site-footer></site-footer>
+</body>
+
+</html>
