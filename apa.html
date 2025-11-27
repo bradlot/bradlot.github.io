@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>🧾 APA Citation Generator</title>
+    <meta name="description" content="Convert any ISBN or link into an APA 7th edition reference and in-text citation.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="./assets/js/confirm-button.js" defer></script>
+    <script src="./assets/js/apa-generator.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container citation-steps">
+            <article class="panel step-panel citation-panel pin-enabled" data-step="builder" data-tool-id="apa-generator" data-tool-label="APA Citation Generator" data-tool-href="apa.html">
+                <header class="panel-heading">
+                    <p class="step-label">Step 1</p>
+                    <h2>APA 7th Citation Builder</h2>
+                    <p>Paste a link or plain ISBN. We will extract the ISBN, pull fresh metadata, and pre-fill the citation for you.</p>
+                </header>
+
+                <textarea id="lookupInput" class="lookup-input" placeholder="https://www.amazon.com/... or 9780134685991" spellcheck="false"></textarea>
+
+                <div class="controls citation-controls">
+                    <button id="lookupButton" class="primary" type="button">Search</button>
+                    <button id="clearLookupButton" class="danger-button" type="button">Reset</button>
+                    <button id="pasteLookupButton" class="ghost" type="button">Paste</button>
+                    <button id="openManualButton" class="ghost" type="button">Manual entry</button>
+                    <button id="openHistoryButton" class="ghost" type="button">View saved references</button>
+                </div>
+
+                <div class="visually-hidden" id="lookupStatus" role="status" aria-live="polite">Waiting for input.</div>
+            </article>
+
+            <article class="panel manual-panel step-panel hidden" data-step="manual" id="manualPanel">
+                <header class="panel-heading manual-heading">
+                    <div>
+                        <p class="step-label">Step 2</p>
+                        <h2>Review &amp; edit citation</h2>
+                        <p id="manualReason">Fill in any missing APA fields below.</p>
+                    </div>
+                    <div class="manual-header-actions">
+                        <button class="ghost small-button" type="button" id="manualBackButton">← Back to search</button>
+                    </div>
+                </header>
+
+                <form id="manualForm" class="manual-form">
+                    <section class="form-section">
+                        <label class="field-label" for="manualTitle">Title</label>
+                        <input id="manualTitle" type="text" class="manual-input" placeholder="Resource title">
+                    </section>
+
+                    <section class="form-section">
+                        <h3>Contributors</h3>
+                        <div class="contributor-list" id="contributorList"></div>
+                        <div class="contributor-actions">
+                            <button class="ghost small-button" type="button" id="addContributorButton">Add contributor</button>
+                        </div>
+                    </section>
+
+                    <section class="form-section">
+                        <h3>Publication info</h3>
+                        <div class="manual-grid">
+                            <label class="manual-field">
+                                <span>Website / Source Name</span>
+                                <input id="manualWebsite" type="text" placeholder="e.g., Yahoo Finance">
+                            </label>
+                            <label class="manual-field">
+                                <span>Publisher / Sponsor</span>
+                                <input id="manualPublisher" type="text" placeholder="e.g., McGraw-Hill">
+                            </label>
+                        </div>
+                        <label class="manual-field manual-field-separated">
+                            <span>URL</span>
+                            <input id="manualUrl" type="url" placeholder="https://example.com/article">
+                        </label>
+                        <label class="toggle manual-toggle manual-toggle-inline">
+                            <input id="manualShowUrl" type="checkbox" checked>
+                            <span class="toggle-indicator"></span>
+                            <span class="toggle-label">Include URL in reference</span>
+                        </label>
+                    </section>
+
+                    <section class="form-section">
+                        <div class="section-heading">
+                            <h3>Published date</h3>
+                        </div>
+                        <div class="date-grid">
+                            <label class="manual-field">
+                                <span>Day</span>
+                                <input id="manualPublishedDay" type="number" min="1" max="31" placeholder="DD">
+                            </label>
+                            <label class="manual-field">
+                                <span>Month</span>
+                                <select id="manualPublishedMonth" class="month-select"></select>
+                            </label>
+                            <label class="manual-field">
+                                <span>Year</span>
+                                <input id="manualPublishedYear" type="number" min="1000" max="9999" placeholder="YYYY">
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="form-section">
+                        <div class="section-heading">
+                            <h3>Date accessed</h3>
+                            <button class="ghost small-button" type="button" id="fillAccessedToday">Use today</button>
+                        </div>
+                        <div class="date-grid">
+                            <label class="manual-field">
+                                <span>Day</span>
+                                <input id="manualAccessedDay" type="number" min="1" max="31" placeholder="DD">
+                            </label>
+                            <label class="manual-field">
+                                <span>Month</span>
+                                <select id="manualAccessedMonth" class="month-select"></select>
+                            </label>
+                            <label class="manual-field">
+                                <span>Year</span>
+                                <input id="manualAccessedYear" type="number" min="1000" max="9999" placeholder="YYYY">
+                            </label>
+                        </div>
+                    </section>
+
+                    <div class="manual-actions">
+                        <button class="primary" type="submit">Create citation</button>
+                        <button class="ghost" type="button" id="manualResetButton">Reset form</button>
+                    </div>
+                </form>
+            </article>
+
+            <article class="panel step-panel hidden" data-step="output" id="outputPanel">
+                <header class="panel-heading manual-heading">
+                    <div>
+                        <p class="step-label">Step 3</p>
+                        <h2>Citation output &amp; history</h2>
+                        <p>Review your saved references and copy the ones you need.</p>
+                    </div>
+                    <div class="manual-header-actions">
+                        <button class="ghost small-button" type="button" id="outputBackButton">← Back to editor</button>
+                    </div>
+                </header>
+
+                <div class="output-actions">
+                    <button class="primary" type="button" id="startOverButton">Start a new citation</button>
+                </div>
+
+                <section class="history-section">
+                    <div class="history-heading">
+                        <h3>Saved references</h3>
+                        <div class="history-controls">
+                            <button class="ghost small-button" type="button" id="deleteSelectedButton" disabled>Delete selected</button>
+                            <button
+                                class="confirm-button small-button"
+                                type="button"
+                                id="clearHistoryButton"
+                                disabled
+                                data-confirm-button
+                                data-confirm-label="Confirm"
+                                data-confirm-default="Delete all"
+                            >
+                                Delete all
+                            </button>
+                        </div>
+                    </div>
+                    <ul id="referenceHistory" class="history-list empty">
+                        <li class="history-empty">No references stored yet.</li>
+                    </ul>
+                </section>
+
+                <textarea id="referenceOutput" class="visually-hidden" aria-hidden="true"></textarea>
+                <textarea id="inTextOutput" class="visually-hidden" aria-hidden="true"></textarea>
+            </article>
+        </section>
+    </main>
+    <site-footer></site-footer>
+</body>
+</html>

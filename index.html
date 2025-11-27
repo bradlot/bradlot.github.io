@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>Apps</title>
+    <meta name="description" content="A collection of open-sourced apps built to make your life easier.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="./assets/js/home.js" defer></script>
+</head>
+<body class="home-page">
+    <nav-bar></nav-bar>
+    <main class="page">
+        <section class="home-hero container">
+            <h1>Choose an app to get started</h1>
+        </section>
+
+        <section class="container tool-grid" aria-label="Available apps">
+            <article class="tool-card" data-tool-id="text-cleaner" data-tool-label="Text Cleaner" data-tool-href="cleaner.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>🧼 Text Cleaner</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin Text Cleaner to navbar"></button>
+                    </div>
+                    <p>Normalize punctuation, strip formatting noise, and review every substitution before copying your final text.</p>
+                </div>
+                <a class="btn-link" href="cleaner.html">Open app →</a>
+            </article>
+
+            <article class="tool-card" data-tool-id="apa-generator" data-tool-label="APA Citation Generator" data-tool-href="apa.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>🧾 APA Citation Generator</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin APA Citation Generator to navbar"></button>
+                    </div>
+                    <p>Turn links and ISBNs into APA 7 references, edit manual fields, and keep a saved history.</p>
+                </div>
+                <a class="btn-link" href="apa.html">Open app →</a>
+            </article>
+
+            <article class="tool-card" data-tool-id="file-viewer" data-tool-label="File Viewer" data-tool-href="viewer.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>📂 File Viewer</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin File Viewer to navbar"></button>
+                    </div>
+                    <p>Open any text-based file inside the browser and skim long outputs with copy-friendly controls.</p>
+                </div>
+                <a class="btn-link" href="viewer.html">Open app →</a>
+            </article>
+
+            <article class="tool-card" data-tool-id="mod-updater" data-tool-label="Minecraft Mod Updater" data-tool-href="mods.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>🧩 Minecraft Mod Updater</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin Minecraft Mod Updater to navbar"></button>
+                    </div>
+                    <p>Upload installed mods to discover the latest Modrinth releases, review details, and download updates together.</p>
+                </div>
+                <a class="btn-link" href="mods.html">Open app →</a>
+            </article>
+
+            <article class="tool-card" data-tool-id="csv-converter" data-tool-label=".CSV → .XLSX" data-tool-href="csv.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>📈 .CSV → .XLSX</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin .CSV → .XLSX to navbar"></button>
+                    </div>
+                    <p>Drop CSVs, review parsed tables, and export polished Excel workbooks without leaving the browser.</p>
+                </div>
+                <a class="btn-link" href="csv.html">Open app →</a>
+            </article>
+
+            <article class="tool-card" data-tool-id="usage-bar" data-tool-label="Usage Bar" data-tool-href="usage.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>📊 Usage Bar</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin Usage Bar to navbar"></button>
+                    </div>
+                    <p>Define categories and their share of a total to generate a simple horizontal or vertical usage bar.</p>
+                </div>
+                <a class="btn-link" href="usage.html">Open app →</a>
+            </article>
+
+            <article class="tool-card" data-tool-id="clicks" data-tool-label="Clicks" data-tool-href="clicks.html">
+                <div>
+                    <div class="tool-card-header">
+                        <h3>🖱️ Clicks</h3>
+                        <button class="pin-toggle" type="button" aria-pressed="false" aria-label="Pin Clicks to navbar"></button>
+                    </div>
+                    <p>Track your live CPS.</p>
+                </div>
+                <a class="btn-link" href="clicks.html">Open app →</a>
+            </article>
+
+        </section>
+    </main>
+    <site-footer></site-footer>
+</body>
+</html>

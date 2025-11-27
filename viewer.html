@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>📂 File Viewer</title>
+    <meta name="description" content="Upload and preview any text-based file directly in your browser for quick review, editing, and exporting.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="./assets/js/confirm-button.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container">
+            <article class="panel viewer-panel pin-enabled" data-tool-id="file-viewer" data-tool-label="File Viewer" data-tool-href="viewer.html">
+                <header class="panel-heading">
+                    <h2>File Viewer</h2>
+                    <p>Upload plain text files, skim their contents, search within them, and export polished copies.</p>
+                </header>
+
+                <div class="viewer-layout">
+                    <section class="viewer-drop-pane">
+                        <div class="drop-zone" id="viewerDropZone">
+                            <input id="fileInput" type="file" multiple accept=".txt,.md,.markdown,.mdx,.tsv,.json,.xml,.html,.htm,.css,.scss,.sass,.less,.js,.mjs,.cjs,.ts,.tsx,.jsx,.py,.r,.rb,.php,.java,.c,.h,.cpp,.hpp,.cs,.go,.swift,.kt,.sql,.yaml,.yml,.log,.ini,.cfg,.conf,.sh,.bash,.zsh,.ps1,.pl,.lua,.tex,.m,.ipynb,.properties,.gradle,text/*" hidden>
+                            <div class="drop-zone-inner">
+                                <p class="drop-zone-title">Upload or drag &amp; drop files</p>
+                                <button id="uploadButton" class="secondary" type="button">Upload files</button>
+                                <p class="file-name" id="viewerFileName">No file selected</p>
+                            </div>
+                        </div>
+
+                        <section class="viewer-file-panel" aria-labelledby="fileListLabel">
+                            <div class="viewer-file-panel-heading">
+                                <h3 id="fileListLabel">File library</h3>
+                                <span id="fileCount">0 files</span>
+                            </div>
+                            <ul class="viewer-file-list" id="fileList" role="listbox" aria-label="Uploaded files">
+                                <li class="viewer-file-empty">Drop files to populate your library.</li>
+                            </ul>
+                        </section>
+                    </section>
+
+                    <section class="viewer-preview-pane">
+                        <header class="preview-header">
+                            <div>
+                                <p class="eyebrow">Active file</p>
+                                <h3 id="activeFileName">No file selected</h3>
+                                <p id="activeFileMeta">Drop files on the left to load their contents.</p>
+                            </div>
+                            <div class="preview-actions">
+                                <button id="copyButton" class="ghost" type="button">Copy text</button>
+                                <button id="downloadButton" class="primary" type="button" disabled>Download</button>
+                                <button
+                                    id="clearButton"
+                                    class="confirm-button"
+                                    type="button"
+                                    data-confirm-button
+                                    data-confirm-label="Confirm"
+                                    data-confirm-default="Reset"
+                                >
+                                    Reset
+                                </button>
+                            </div>
+                        </header>
+
+                        <div class="preview-shell">
+                            <textarea id="fileEditor" class="viewer-editor viewer-editor-empty" spellcheck="false" aria-label="File contents" disabled>Drop files on the left to preview them here.</textarea>
+                        </div>
+                    </section>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <site-footer></site-footer>
+    <script src="./assets/js/file-viewer.js" defer></script>
+</body>
+</html>

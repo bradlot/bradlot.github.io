@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>📈 .CSV → .XLSX</title>
+    <meta name="description" content="Convert CSV files to Excel workbooks and preview the data instantly.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+    <script src="./assets/js/csv-converter.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container">
+            <article class="panel converter-panel pin-enabled" data-tool-id="csv-converter" data-tool-label=".CSV → .XLSX" data-tool-href="csv.html">
+                <header class="panel-heading">
+                    <h2>.CSV → .XLSX</h2>
+                    <p>Drop a CSV file to preview its data, adjust headers, and download a ready-to-share Excel workbook.</p>
+                </header>
+
+                <div class="drop-zone" id="csvDropZone">
+                    <input id="csvFileInput" type="file" accept=".csv,text/csv" hidden>
+                    <div class="drop-zone-inner">
+                        <p class="drop-zone-title">Upload or drag &amp; drop your CSV file here</p>
+                        <button id="csvUploadButton" class="secondary" type="button">Upload CSV</button>
+                        <p class="file-name" id="csvFileName">No file selected</p>
+                    </div>
+                </div>
+
+                <div class="converter-controls">
+                    <label class="toggle">
+                        <input type="checkbox" id="headerCheckbox" checked>
+                        <span class="toggle-indicator"></span>
+                        <span class="toggle-label">First row contains column headers</span>
+                    </label>
+                    <div class="converter-buttons">
+                        <button
+                            id="clearCsvButton"
+                            class="danger-button"
+                            type="button"
+                        >
+                            Reset
+                        </button>
+                        <button id="downloadExcelButton" class="primary" type="button" disabled>Download Excel</button>
+                    </div>
+                </div>
+
+                <div class="table-preview" id="tablePreview">
+                    <p class="preview-placeholder">Upload a CSV file to see a spreadsheet preview.</p>
+                </div>
+            </article>
+        </section>
+    </main>
+    <site-footer></site-footer>
+</body>
+</html>

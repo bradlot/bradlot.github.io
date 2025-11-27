@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>🧩 Minecraft Mod Updater</title>
+    <meta name="description" content="Upload your current Minecraft mods, check for latest releases, and download updates instantly.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+    <script src="./assets/js/mod-updater.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container">
+            <article class="panel mod-panel pin-enabled" data-tool-id="mod-updater" data-tool-label="Minecraft Mod Updater" data-tool-href="mods.html">
+                <header class="panel-heading">
+                    <h2>Minecraft Mod Updater</h2>
+                    <p>Drop your installed mods to fetch the latest releases from Modrinth, review changelog info, and download everything at once.</p>
+                </header>
+
+                <div class="drop-zone" id="modDropZone" tabindex="0">
+                    <input id="modFileInput" type="file" accept=".jar" multiple hidden>
+                    <div class="drop-zone-inner">
+                        <p class="drop-zone-title">Upload or drag &amp; drop your mods</p>
+                        <button id="browseModsButton" class="secondary" type="button">Select .jar files</button>
+                        <p class="file-name" id="modSelectionSummary">No mods selected.</p>
+                    </div>
+                </div>
+
+                <div class="mod-update-controls">
+                    <label class="manual-field mod-field" for="loaderSelect">
+                        <span>Loader</span>
+                        <select id="loaderSelect">
+                            <option value="fabric" selected>Fabric</option>
+                            <option value="quilt">Quilt</option>
+                            <option value="forge">Forge</option>
+                            <option value="neoforge">NeoForge</option>
+                        </select>
+                    </label>
+                    <label class="manual-field mod-field" for="versionSelect">
+                        <span>Minecraft version</span>
+                        <select id="versionSelect" disabled>
+                            <option>Loading versions…</option>
+                        </select>
+                    </label>
+                    <div class="mod-actions">
+                        <button id="resetModsButton" class="danger-button" type="button">Reset</button>
+                        <button id="updateModsButton" class="primary" type="button" disabled>Update mods</button>
+                        <button id="downloadAllButton" class="secondary" type="button" disabled>Download all</button>
+                    </div>
+                </div>
+
+                <p class="mod-status" id="modStatus">Upload mods to check for new releases.</p>
+
+                <div class="mod-results" id="modResults">
+                    <p class="mod-placeholder">Upload mods above and press <strong>Update mods</strong> to fetch the latest releases.</p>
+                </div>
+
+                <section class="missing-mods" id="dependencySection" hidden>
+                    <div class="missing-header">
+                        <h3>Required dependencies</h3>
+                        <p id="dependencySummary"></p>
+                    </div>
+                    <div id="dependencyList" class="mod-results"></div>
+                </section>
+
+                <section class="missing-mods" id="missingModsSection" hidden>
+                    <div class="missing-header">
+                        <h3>Skipped mods</h3>
+                        <p id="missingModsSummary"></p>
+                    </div>
+                    <div id="missingModsList" class="mod-results"></div>
+                </section>
+                <p class="modrinth-credit">
+                    Powered by
+                    <a class="modrinth-brand" href="https://modrinth.com" target="_blank" rel="noopener noreferrer">
+                        <img src="./assets/img/modrinth.svg" alt="" aria-hidden="true">
+                        Modrinth
+                    </a>
+                </p>
+            </article>
+        </section>
+    </main>
+
+    <site-footer></site-footer>
+</body>
+</html>

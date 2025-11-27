@@ -1,0 +1,26 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-glow" x1="24" y1="12" x2="168" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E8F3FF"/>
+      <stop offset="1" stop-color="#C8D7FF"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="translate(96 60) rotate(90) scale(96 120)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#AFC8FF" stop-opacity="0.2"/>
+    </radialGradient>
+    <linearGradient id="card-sheen" x1="40" y1="24" x2="160" y2="172" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#F2F5FF" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="192" height="192" rx="48" fill="url(#bg-glow)"/>
+  <rect x="12" y="18" width="168" height="156" rx="44" fill="url(#halo)" opacity="0.65"/>
+
+  <g opacity="0.95">
+    <!-- Larger, offset stack -->
+    <rect x="40" y="36" width="136" height="136" rx="40" fill="#FFFFFF" fill-opacity="0.14" stroke="#E0EBFF" stroke-opacity="0.55" stroke-width="1.5"/>
+    <rect x="34" y="36" width="124" height="124" rx="36" fill="#FFFFFF" fill-opacity="0.25" stroke="#F4F8FF" stroke-opacity="0.7" stroke-width="1.5"/>
+    <rect x="28" y="36" width="112" height="112" rx="32" fill="url(#card-sheen)" fill-opacity="0.9" stroke="#FFFFFF" stroke-opacity="0.85" stroke-width="1.5"/>
+  </g>
+</svg>

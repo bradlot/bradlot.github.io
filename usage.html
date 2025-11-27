@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>📊 Usage Bar</title>
+    <meta name="description" content="Build a simple percentage bar.">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="./assets/js/confirm-button.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+    <script src="./assets/js/usage-bar.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container">
+            <article class="panel usage-panel pin-enabled" data-tool-id="usage-bar" data-tool-label="Usage Bar" data-tool-href="usage.html">
+                <header class="panel-heading">
+                    <h2>Usage Bar Generator</h2>
+                    <p>Enter category names and percentages to build a simple usage bar you can screenshot or embed.</p>
+                </header>
+
+                <section class="usage-layout" aria-label="Usage bar builder">
+                    <form class="usage-form" id="usageForm">
+                        <div class="usage-inputs">
+                            <div class="form-row">
+                                <label class="field-label" for="categoryName">Category name</label>
+                                <input id="categoryName" type="text" class="manual-input" placeholder="e.g., Housing" required>
+                            </div>
+                            <div class="form-row">
+                                <label class="field-label" for="categoryPercent">Percent of total</label>
+                                <input id="categoryPercent" type="number" class="manual-input" min="0" max="100" step="0.1" placeholder="e.g., 35" required>
+                            </div>
+                        </div>
+
+                        <div class="usage-controls">
+                            <label class="toggle usage-legend-toggle">
+                                <input type="checkbox" id="includeLegend">
+                                <span class="toggle-indicator"></span>
+                                <span class="toggle-label">Include legend in PNG</span>
+                            </label>
+                            <div class="usage-buttons">
+                                <button
+                                    type="button"
+                                    id="undoUsage"
+                                    class="confirm-button small-button hidden"
+                                    data-confirm-button
+                                    data-confirm-label="Confirm"
+                                    data-confirm-default="Undo"
+                                >
+                                    Undo
+                                </button>
+                                <button
+                                    type="button"
+                                    id="clearUsage"
+                                    class="confirm-button"
+                                    data-confirm-button
+                                    data-confirm-label="Confirm"
+                                    data-confirm-default="Clear all"
+                                >
+                                    Clear all
+                                </button>
+                                <button type="submit" class="primary">Add category</button>
+                                <button type="button" id="saveUsage" class="ghost">Save</button>
+                                <button type="button" id="copyUsage" class="ghost">Copy</button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <section class="usage-preview" aria-label="Usage bar preview">
+                        <header class="usage-preview-header">
+                            <h3>Preview</h3>
+                            <p id="usageSummary" class="usage-summary">No categories yet. Add a few to build the bar.</p>
+                        </header>
+                        <div id="usageExport" class="usage-export">
+                            <div class="usage-bar-shell">
+                                <div id="usageBar" class="usage-bar usage-bar-horizontal" role="img" aria-label="Usage bar"></div>
+                            </div>
+
+                            <ul id="usageList" class="usage-list" aria-label="Categories"></ul>
+                        </div>
+                    </section>
+                </section>
+            </article>
+        </section>
+    </main>
+
+    <site-footer></site-footer>
+</body>
+</html>
