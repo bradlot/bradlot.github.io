@@ -142,7 +142,7 @@
             const padding = {
                 top: 20 * scale,
                 right: 20 * scale,
-                bottom: 15 * scale,
+                bottom: 30 * scale,
                 left: 40 * scale
             };
             const chartWidth = Math.max(1, width - padding.left - padding.right);
@@ -267,6 +267,22 @@
                         ? Math.round(value).toString()
                         : value.toFixed(1).replace(/\.0$/, '');
                 graphCtx.fillText(label, padding.left - 10 * scale, y);
+            }
+            graphCtx.restore();
+
+            // Draw X-axis labels (time in seconds)
+            graphCtx.save();
+            graphCtx.globalAlpha = 0.6;
+            graphCtx.fillStyle = '#656d76';
+            graphCtx.font = `${Math.max(10, 12 * scale)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`;
+            graphCtx.textAlign = 'center';
+            graphCtx.textBaseline = 'top';
+            const xAxisLabels = 5;
+            for (let i = 0; i <= xAxisLabels; i++) {
+                const timeValue = viewStart + (viewDuration / xAxisLabels) * i;
+                const x = padding.left + (chartWidth / xAxisLabels) * i;
+                const label = Math.round(timeValue) + 's';
+                graphCtx.fillText(label, x, height - padding.bottom + 5 * scale);
             }
             graphCtx.restore();
 
@@ -436,10 +452,8 @@
                 activeDuration > 0 ? `${formatSeconds(remaining)} left` : formatSeconds(clampedElapsed);
             updateTotals();
 
-            // Only add point if we have a valid Live CPS or if we already have points (to show drops)
-            if (liveCps > 0 || graphPoints.length > 0) {
-                addGraphPoint(clampedElapsed, liveCps);
-            }
+            // Always add point to show drops to zero
+            addGraphPoint(clampedElapsed, liveCps);
 
             if (activeDuration > 0 && elapsed >= activeDuration) {
                 finalizeSession('timer');
@@ -670,7 +684,7 @@
             const padding = {
                 top: 30,
                 right: 30,
-                bottom: 25,
+                bottom: 40,
                 left: 50
             };
             const chartWidth = effectiveWidth - padding.left - padding.right;
@@ -766,6 +780,21 @@
                     ? Math.round(value).toString()
                     : value.toFixed(1).replace(/\.0$/, '');
                 reportCtx.fillText(label, padding.left - 12, y);
+            }
+            reportCtx.restore();
+
+            // Draw X-axis labels for report
+            reportCtx.save();
+            reportCtx.fillStyle = '#656d76';
+            reportCtx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+            reportCtx.textAlign = 'center';
+            reportCtx.textBaseline = 'top';
+            const xAxisLabels = 5;
+            for (let i = 0; i <= xAxisLabels; i++) {
+                const timeValue = viewStart + (viewDuration / xAxisLabels) * i;
+                const x = padding.left + (chartWidth / xAxisLabels) * i;
+                const label = Math.round(timeValue) + 's';
+                reportCtx.fillText(label, x, effectiveHeight - padding.bottom + 8);
             }
             reportCtx.restore();
 

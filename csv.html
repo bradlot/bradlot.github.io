@@ -6,7 +6,8 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <title>📈 .CSV → .XLSX</title>
     <meta name="description" content="Convert CSV files to Excel workbooks and preview the data instantly.">
-    <link rel="stylesheet" href="./assets/css/styles.css">
+    <link rel="stylesheet" href="./assets/css/global.css">
+    <link rel="stylesheet" href="./assets/css/csv.css">
     <script src="./components/navbar.js" defer></script>
     <script src="./components/footer.js" defer></script>
     <script src="./assets/js/wip-guard.js" defer></script>
@@ -35,11 +36,12 @@
                 </div>
 
                 <div class="converter-controls">
-                    <label class="toggle">
-                        <input type="checkbox" id="headerCheckbox" checked>
-                        <span class="toggle-indicator"></span>
-                        <span class="toggle-label">First row contains column headers</span>
-                    </label>
+                    <div class="checkbox-container">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="headerCheckbox" checked>
+                            <span>First row contains column headers</span>
+                        </label>
+                    </div>
                     <div class="converter-buttons">
                         <button
                             id="clearCsvButton"

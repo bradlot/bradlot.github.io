@@ -1,0 +1,229 @@
+body.home-page {
+    height: 100vh;
+    overflow: hidden;
+}
+
+body.home-page main.page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.home-hero {
+    padding: clamp(2rem, 5vw, 3rem) 0 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.home-hero h1 {
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    margin-bottom: 0.6rem;
+    color: var(--color-fg-default);
+}
+
+.home-hero p {
+    font-size: 1.05rem;
+    margin: 0;
+    max-width: 640px;
+    text-align: center;
+}
+
+.tool-grid {
+    margin: 0.25rem auto 0;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1.25rem;
+    overflow-x: scroll;
+    overflow-y: visible;
+    padding: 1rem clamp(1rem, 4vw, 2.5rem) 1rem;
+    scroll-snap-type: none;
+    touch-action: pan-x;
+    scroll-behavior: smooth;
+    position: relative;
+    isolation: isolate;
+    z-index: 15;
+    overscroll-behavior: contain;
+    width: min(1150px, 92vw);
+}
+
+.tool-card {
+    --surface-padding: 1.75rem 1.5rem 1.5rem;
+    --surface-radius: var(--radius-lg);
+    --surface-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    flex: 0 0 clamp(260px, 32vw, 340px);
+    min-height: 0;
+    scroll-snap-align: none;
+    z-index: var(--card-layer, 10);
+    will-change: transform, opacity;
+    opacity: 1;
+    transform: none;
+    --card-delay: 0;
+}
+
+.tool-card.wip, .tool-card[data-status="wip"] {
+    border-color: rgba(208, 60, 47, 0.6);
+}
+
+.tool-card.wip::after, .tool-card[data-status="wip"]::after {
+    content: "UNDER DEVELOPMENT";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #b42318;
+    text-align: center;
+    padding: 0 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 241, 242, 0.9), rgba(255, 241, 242, 0.7));
+    z-index: 20;
+    pointer-events: none;
+}
+
+.tool-card.wip a.btn-link, .tool-card[data-status="wip"] a.btn-link {
+    pointer-events: none;
+    cursor: default;
+    opacity: 0.55;
+}
+
+.tool-grid:not(.ready) .tool-card {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.94);
+    z-index: 1;
+}
+
+.tool-grid.ready .tool-card {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0) scale(0.94);
+    animation: homeCardFlyIn 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation-delay: calc(var(--card-delay, 0) * 1ms);
+}
+
+.tool-card:hover {
+    border-color: var(--color-border-muted);
+    box-shadow: var(--shadow-card), var(--shadow-panel);
+}
+
+.tool-card.wip:hover, .tool-card[data-status="wip"]:hover {
+    border-color: rgba(208, 60, 47, 0.6);
+    box-shadow: var(--shadow-card);
+}
+
+.tool-card h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.tool-card p {
+    color: var(--color-fg-muted);
+    margin: 0 0 0.6rem;
+}
+
+.pin-toggle {
+    position: absolute;
+    top: 0.55rem;
+    right: 0.55rem;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-muted);
+    background: var(--color-canvas-subtle);
+    color: var(--color-fg-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-height: 0;
+}
+
+.pin-toggle:hover, .pin-toggle:focus-visible {
+    border-color: var(--color-accent-fg);
+    color: var(--color-accent-fg);
+}
+
+.pin-toggle[aria-pressed="true"] {
+    background: var(--color-accent-muted);
+    border-color: var(--color-accent-fg);
+    color: var(--color-accent-fg);
+}
+
+.pin-toggle::before {
+    content: "\1F516";
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.tool-card.wip .pin-toggle, .tool-card[data-status="wip"] .pin-toggle {
+    display: none;
+}
+
+@keyframes homeCardFlyIn {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 28px, 0) scale(0.9);
+    }
+    70% {
+        opacity: 1;
+        transform: translate3d(0, -6px, 0) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tool-grid {
+        scroll-behavior: auto;
+    }
+
+    .tool-grid.ready .tool-card {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.tool-card a.btn-link {
+    align-self: flex-start;
+    text-decoration: none;
+    color: var(--color-accent-fg);
+    --btn-bg: transparent;
+    --btn-border: none;
+    --btn-shadow: none;
+    padding: 0;
+    min-height: unset;
+    border: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: auto;
+}
+
+.tool-card a.btn-link:hover {
+    text-decoration: underline;
+}
+
+.tool-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    padding-right: 2.5rem;
+}

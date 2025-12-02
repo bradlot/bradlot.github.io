@@ -6,7 +6,8 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <title>📊 Usage Bar</title>
     <meta name="description" content="Build a simple percentage bar.">
-    <link rel="stylesheet" href="./assets/css/styles.css">
+    <link rel="stylesheet" href="./assets/css/global.css">
+    <link rel="stylesheet" href="./assets/css/usage.css">
     <script src="./components/navbar.js" defer></script>
     <script src="./components/footer.js" defer></script>
     <script src="./assets/js/wip-guard.js" defer></script>
@@ -39,11 +40,12 @@
                         </div>
 
                         <div class="usage-controls">
-                            <label class="toggle usage-legend-toggle">
-                                <input type="checkbox" id="includeLegend">
-                                <span class="toggle-indicator"></span>
-                                <span class="toggle-label">Include legend in PNG</span>
-                            </label>
+                            <div class="checkbox-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="includeLegend">
+                                    <span>Include legend in PNG</span>
+                                </label>
+                            </div>
                             <div class="usage-buttons">
                                 <button
                                     type="button"

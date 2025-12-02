@@ -1,0 +1,225 @@
+.mod-update-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--button-gap);
+    align-items: flex-end;
+}
+
+.mod-field {
+    flex: 1 1 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.mod-field span {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--color-fg-muted);
+}
+
+.mod-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--button-gap);
+    margin-left: auto;
+}
+
+.mod-status {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--color-fg-muted);
+    min-height: 1.5em;
+}
+
+.mod-status[data-state="success"] {
+    color: #0b9c31;
+}
+
+.mod-status[data-state="error"] {
+    color: var(--color-danger-fg);
+}
+
+.mod-status[data-state="warning"] {
+    color: #a45f07;
+}
+
+.mod-results {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.mod-placeholder {
+    margin: 0;
+    border: 1px dashed var(--color-border-default);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    background: var(--color-canvas-subtle);
+    color: var(--color-fg-muted);
+    text-align: center;
+}
+
+.mod-card {
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg);
+    background: var(--color-canvas-subtle);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.mod-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.mod-card-copy {
+    flex: 1 1 220px;
+    min-width: 220px;
+}
+
+.mod-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.mod-link:hover h3, .mod-link:focus-visible h3 {
+    text-decoration: underline;
+}
+
+.mod-card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.mod-description {
+    margin: 0.3rem 0 0;
+    color: var(--color-fg-muted);
+    font-size: 0.95rem;
+}
+
+.mod-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    object-fit: cover;
+    background: var(--color-canvas-default);
+    border: 1px solid var(--color-border-default);
+}
+
+.mod-card-header button {
+    align-self: flex-start;
+}
+
+.mod-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.85rem;
+    margin: 0;
+}
+
+.mod-meta dt {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-muted);
+    margin: 0 0 0.1rem;
+}
+
+.mod-meta dd {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.missing-mods {
+    border: 1px dashed var(--color-border-default);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    background: var(--color-canvas-default);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.missing-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.missing-header h3 {
+    margin: 0;
+}
+
+.missing-header p {
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: 0.9rem;
+}
+
+.modrinth-credit {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-fg-muted);
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.modrinth-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    color: var(--color-fg-default);
+    text-decoration: none;
+}
+
+.modrinth-brand img {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .mod-update-controls {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: var(--button-gap);
+    }
+
+    .mod-update-controls .mod-field {
+        flex: 1 1 150px;
+        min-width: 0;
+    }
+
+    .mod-actions {
+        margin-left: 0;
+        flex: 1 1 100%;
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .mod-actions button {
+        width: 100%;
+    }
+
+    .mod-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .mod-card-header button {
+        width: 100%;
+    }
+}

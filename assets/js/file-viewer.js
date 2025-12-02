@@ -16,12 +16,6 @@
         const dropFileLabel = document.getElementById('viewerFileName');
         const copyButton = document.getElementById('copyButton');
         const downloadButton = document.getElementById('downloadButton');
-        const downloadSelectedButton = document.getElementById('downloadSelectedButton');
-        const downloadZipButton = document.getElementById('downloadZipButton');
-        const exportModal = document.getElementById('exportModal');
-        const exportModalOverlay = document.getElementById('exportModalOverlay');
-        const closeExportModalButton = document.getElementById('closeExportModal');
-        const exportFileList = document.getElementById('exportFileList');
         const dropPane = document.querySelector('.viewer-drop-pane');
         const previewPane = document.querySelector('.viewer-preview-pane');
         const previewShell = document.querySelector('.preview-shell');
@@ -31,17 +25,9 @@
         const editor = document.getElementById('fileEditor');
         const activeFileName = document.getElementById('activeFileName');
         const activeFileMeta = document.getElementById('activeFileMeta');
-        const selectAllCheckbox = document.getElementById('selectAllFiles');
-        const clearSelectionButton = document.getElementById('clearSelectionButton');
-        const selectedCountLabel = document.getElementById('selectedCount');
-        const exportExtensionInput = document.getElementById('exportExtension');
 
         if (!dropZone || !fileInput || !editor) {
             return;
-        }
-
-        if (exportModal) {
-            exportModal.setAttribute('aria-hidden', exportModal.classList.contains('hidden') ? 'true' : 'false');
         }
 
         const supportsClipboard = Boolean(navigator.clipboard);
@@ -141,8 +127,6 @@
             return withDot.replace(/^\.+/, '.');
         };
 
-        const getExportExtension = () => sanitizeExtension(state.exportExtension || '');
-
         const buildDownloadName = (fileName, extension) => {
             if (!extension) return fileName;
             const lastDot = fileName.lastIndexOf('.');
@@ -175,116 +159,6 @@
         };
 
         const getSelectedRecords = () => state.files.filter(file => state.selectedIds.has(file.id));
-
-        const renderExportList = () => {
-            if (!exportFileList) return;
-            if (!state.files.length) {
-                exportFileList.innerHTML = '<li class="viewer-export-empty">Upload files to enable downloads.</li>';
-                return;
-            }
-
-            const markup = state.files.map(file => {
-                const isSelected = state.selectedIds.has(file.id);
-                const details = [formatBytes(file.size)]
-                    .concat(file.modifiedTime ? [`Updated ${formatTimestamp(file.modifiedTime)}`] : [])
-                    .filter(Boolean)
-                    .join(' • ');
-                const badge = file.id === state.activeId ? '<span class="viewer-export-badge">Active</span>' : '';
-                return `
-                    <li class="viewer-export-file-row">
-                        <label class="viewer-export-checkbox">
-                            <input type="checkbox" data-export-file-id="${file.id}" ${isSelected ? 'checked' : ''}>
-                            <span class="viewer-export-file-details">
-                                <span class="viewer-export-file-name">${file.name}</span>
-                                <span class="viewer-export-file-meta">${[details, badge].filter(Boolean).join(' • ') || 'Plain text'}</span>
-                            </span>
-                        </label>
-                    </li>
-                `;
-            }).join('');
-
-            exportFileList.innerHTML = markup;
-        };
-
-        const updateSelectionSummary = () => {
-            const selectedCount = getSelectedRecords().length;
-            const total = state.files.length;
-
-            if (selectAllCheckbox) {
-                selectAllCheckbox.disabled = total === 0;
-                selectAllCheckbox.checked = total > 0 && selectedCount === total;
-                selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < total;
-            }
-
-            if (clearSelectionButton) {
-                clearSelectionButton.disabled = selectedCount === 0;
-            }
-
-            if (selectedCountLabel) {
-                selectedCountLabel.textContent = selectedCount === 0
-                    ? 'No files selected'
-                    : selectedCount === 1
-                        ? '1 file selected'
-                        : `${selectedCount} files selected`;
-            }
-
-            if (downloadSelectedButton) {
-                downloadSelectedButton.disabled = selectedCount === 0;
-                downloadSelectedButton.textContent = selectedCount > 1
-                    ? `Download ${selectedCount} files`
-                    : 'Download selected';
-            }
-
-            if (downloadZipButton) {
-                const hasZipSupport = Boolean(window.JSZip);
-                downloadZipButton.disabled = total === 0 || !hasZipSupport;
-                downloadZipButton.textContent = selectedCount
-                    ? 'Download ZIP (selected)'
-                    : 'Download ZIP (all)';
-                if (hasZipSupport) {
-                    downloadZipButton.removeAttribute('title');
-                } else {
-                    downloadZipButton.title = 'ZIP downloads are not available in this browser.';
-                }
-            }
-        };
-
-        const refreshExportPanel = (options = {}) => {
-            const { autoSelectActive = false } = options;
-            syncSelectionState();
-            if (autoSelectActive && !state.selectedIds.size && state.activeId) {
-                state.selectedIds.add(state.activeId);
-                persistState();
-            }
-            renderExportList();
-            updateSelectionSummary();
-        };
-
-        const isExportModalOpen = () => Boolean(exportModal && !exportModal.classList.contains('hidden'));
-
-        const openExportModal = () => {
-            if (!exportModal || !state.files.length) return;
-            refreshExportPanel({ autoSelectActive: true });
-            exportModal.classList.remove('hidden');
-            exportModal.setAttribute('aria-hidden', 'false');
-            document.body.classList.add('viewer-modal-open');
-            rootElement.classList.add('viewer-modal-open');
-            setTimeout(() => {
-                exportExtensionInput?.focus();
-            }, 0);
-        };
-
-        const closeExportModal = () => {
-            if (!exportModal) return;
-            const wasOpen = !exportModal.classList.contains('hidden');
-            exportModal.classList.add('hidden');
-            exportModal.setAttribute('aria-hidden', 'true');
-            document.body.classList.remove('viewer-modal-open');
-            rootElement.classList.remove('viewer-modal-open');
-            if (wasOpen) {
-                downloadButton?.focus();
-            }
-        };
 
         const triggerDownload = (content, mimeType, filename) => {
             const blob = content instanceof Blob ? content : new Blob([content || ''], { type: mimeType || 'text/plain' });
@@ -327,10 +201,6 @@
         if (typeof restoredState?.exportExtension === 'string') {
             const sanitized = sanitizeExtension(restoredState.exportExtension);
             state.exportExtension = sanitized || restoredState.exportExtension || '';
-        }
-
-        if (exportExtensionInput) {
-            exportExtensionInput.value = state.exportExtension;
         }
 
         const getActiveFile = () => state.files.find(file => file.id === state.activeId) || null;
@@ -382,7 +252,6 @@
             if (!state.files.length) {
                 fileList.innerHTML = '<li class="viewer-file-empty">Drop files to populate your library.</li>';
                 fileCount.textContent = '0 files';
-                refreshExportPanel();
                 syncColumnHeights();
                 return;
             }
@@ -424,7 +293,6 @@
 
             fileList.innerHTML = markup;
             fileCount.textContent = state.files.length === 1 ? '1 file' : `${state.files.length} files`;
-            refreshExportPanel();
             syncColumnHeights();
         };
 
@@ -544,42 +412,10 @@
             state.selectedIds.clear();
             state.exportExtension = '';
             fileInput.value = '';
-            if (exportExtensionInput) exportExtensionInput.value = '';
-            closeExportModal();
             renderActiveFile();
             setStatus('No files uploaded yet.');
             if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
             clearPersistedState();
-        };
-
-        const downloadSelectedRecords = () => {
-            const selection = getSelectedRecords();
-            if (!selection.length) return false;
-            const extension = getExportExtension();
-            selection.forEach(record => {
-                const filename = buildDownloadName(record.name, extension);
-                triggerDownload(record.content || '', record.type || 'text/plain', filename);
-            });
-            return true;
-        };
-
-        const downloadRecordsAsZip = async records => {
-            if (!records.length || !window.JSZip) return false;
-            const extension = getExportExtension();
-            const zip = new window.JSZip();
-            records.forEach(record => {
-                const filename = buildDownloadName(record.name, extension);
-                zip.file(filename, record.content || '', { binary: false });
-            });
-            try {
-                const blob = await zip.generateAsync({ type: 'blob' });
-                const zipName = records.length === state.files.length ? 'file-library.zip' : 'selected-files.zip';
-                triggerDownload(blob, 'application/zip', zipName);
-                return true;
-            } catch (error) {
-                console.warn('Unable to prepare the zip archive.', error);
-                return false;
-            }
         };
 
         const copyActiveFile = async () => {
@@ -606,62 +442,9 @@
         clearButton?.addEventListener('click', clearAll);
 
         copyButton?.addEventListener('click', copyActiveFile);
-        downloadButton?.addEventListener('click', openExportModal);
-        downloadSelectedButton?.addEventListener('click', () => {
-            const performed = downloadSelectedRecords();
-            if (performed) {
-                closeExportModal();
-            }
-        });
-        downloadZipButton?.addEventListener('click', async () => {
-            const selection = getSelectedRecords();
-            const targets = selection.length ? selection : state.files;
-            if (!targets.length || !window.JSZip) return;
-            const previousLabel = downloadZipButton.textContent;
-            downloadZipButton.disabled = true;
-            downloadZipButton.textContent = 'Preparing ZIP…';
-            try {
-                const success = await downloadRecordsAsZip(targets);
-                if (success) {
-                    closeExportModal();
-                }
-            } finally {
-                downloadZipButton.textContent = previousLabel;
-                refreshExportPanel();
-            }
-        });
-
-        closeExportModalButton?.addEventListener('click', closeExportModal);
-        exportModalOverlay?.addEventListener('click', closeExportModal);
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && isExportModalOpen()) {
-                event.preventDefault();
-                closeExportModal();
-            }
-        });
-
-        selectAllCheckbox?.addEventListener('change', event => {
-            const target = event.target;
-            if (!(target instanceof HTMLInputElement)) return;
-            if (!state.files.length) {
-                target.checked = false;
-                target.indeterminate = false;
-                return;
-            }
-            if (target.checked) {
-                state.files.forEach(file => state.selectedIds.add(file.id));
-            } else {
-                state.selectedIds.clear();
-            }
-            persistState();
-            refreshExportPanel();
-        });
-
-        clearSelectionButton?.addEventListener('click', () => {
-            if (!state.selectedIds.size) return;
-            state.selectedIds.clear();
-            persistState();
-            refreshExportPanel();
+        downloadButton?.addEventListener('click', () => {
+            if (!state.files.length) return;
+            window.location.href = 'viewer-export.html';
         });
 
         dropZone.addEventListener('dragover', event => {
@@ -710,21 +493,6 @@
             persistState();
         });
 
-        exportFileList?.addEventListener('change', event => {
-            const target = event.target;
-            if (!(target instanceof HTMLInputElement)) return;
-            if (!target.matches('[data-export-file-id]')) return;
-            const fileId = target.getAttribute('data-export-file-id');
-            if (!fileId) return;
-            if (target.checked) {
-                state.selectedIds.add(fileId);
-            } else {
-                state.selectedIds.delete(fileId);
-            }
-            persistState();
-            refreshExportPanel();
-        });
-
         editor.addEventListener('input', () => {
             const active = getActiveFile();
             if (!active) return;
@@ -739,18 +507,6 @@
                     syncColumnHeights();
                 });
             });
-        });
-
-        exportExtensionInput?.addEventListener('input', () => {
-            state.exportExtension = exportExtensionInput.value;
-            persistState();
-        });
-
-        exportExtensionInput?.addEventListener('blur', () => {
-            const normalized = sanitizeExtension(exportExtensionInput.value);
-            exportExtensionInput.value = normalized;
-            state.exportExtension = normalized;
-            persistState();
         });
 
         syncColumnHeights();

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <title>📦 File Export</title>
+    <meta name="description" content="Review the files you uploaded and export them as individual downloads or a single ZIP.">
+    <link rel="stylesheet" href="./assets/css/global.css">
+    <link rel="stylesheet" href="./assets/css/viewer.css">
+    <script src="./components/navbar.js" defer></script>
+    <script src="./components/footer.js" defer></script>
+    <script src="./assets/js/wip-guard.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
+    <script src="./assets/js/file-export.js" defer></script>
+</head>
+<body>
+    <nav-bar></nav-bar>
+
+    <main class="page">
+        <section class="workspace container">
+            <article class="panel viewer-export-panel-page" data-tool-id="file-export" data-tool-label="File Export" data-tool-href="viewer-export.html">
+                <header class="panel-heading manual-heading viewer-export-page-heading">
+                    <div>
+                        <h2>Export files</h2>
+                        <p>Choose which uploads to include, pick a format, and download polished copies.</p>
+                    </div>
+                    <div class="manual-header-actions">
+                        <button class="ghost small-button viewer-back-link" type="button" id="viewerExportBackButton">← Back to viewer</button>
+                    </div>
+                </header>
+
+                <div class="viewer-export-body viewer-export-page-body">
+                    <section class="viewer-modal-card viewer-export-selection" aria-labelledby="exportLibraryTitle">
+                        <div class="viewer-modal-card-heading">
+                            <div>
+                                <h4 id="exportLibraryTitle">File library</h4>
+                            </div>
+                            <p class="viewer-modal-subtext">Choose which files to include before you export them.</p>
+                        </div>
+                        <div class="viewer-selection-controls">
+                            <p id="selectedCount" class="viewer-selection-count">No files selected</p>
+                            <div class="checkbox-container">
+                                <label class="checkbox-label" for="selectAllFiles">
+                                    <input id="selectAllFiles" type="checkbox" aria-label="Select all uploaded files">
+                                    <span>Select all</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="viewer-export-list-shell">
+                            <div class="viewer-export-list-head">
+                                <span>File name</span>
+                                <span>Details</span>
+                            </div>
+                            <ul class="viewer-export-file-list" id="exportFileList">
+                                <li class="viewer-export-empty">Upload files in the viewer first.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="viewer-modal-card viewer-export-controls" aria-live="polite" aria-labelledby="exportOptionsTitle">
+                        <div class="viewer-modal-card-heading">
+                            <div>
+                                <h4 id="exportOptionsTitle">Export settings</h4>
+                            </div>
+                            <p class="viewer-modal-subtext">Set a file extension or keep the original type.</p>
+                        </div>
+                        <label class="viewer-export-label" for="exportExtension">
+                            Export file type
+                            <input
+                                id="exportExtension"
+                                type="text"
+                                class="viewer-export-input"
+                                placeholder="Leave blank to keep original"
+                                autocomplete="off"
+                            >
+                        </label>
+                        <p class="viewer-export-hint">Example: .pdf, .docx, .txt — applies to all downloaded files.</p>
+                        <div class="viewer-export-presets" role="group" aria-label="Common formats">
+                            <button type="button" class="viewer-export-preset" data-extension="">Original</button>
+                            <button type="button" class="viewer-export-preset" data-extension=".pdf">.pdf</button>
+                            <button type="button" class="viewer-export-preset" data-extension=".docx">.docx</button>
+                            <button type="button" class="viewer-export-preset" data-extension=".txt">.txt</button>
+                        </div>
+                        <div class="viewer-export-actions">
+                            <button id="downloadSelectedButton" class="secondary" type="button" disabled>Download selected</button>
+                            <button id="downloadZipButton" class="primary" type="button" disabled>Download ZIP</button>
+                        </div>
+                    </section>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <site-footer></site-footer>
+</body>
+</html>
