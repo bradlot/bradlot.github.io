@@ -8,6 +8,7 @@
     };
 
     ready(() => {
+        const rootElement = document.documentElement;
         const dropZone = document.getElementById('viewerDropZone');
         const fileInput = document.getElementById('fileInput');
         const uploadButton = document.getElementById('uploadButton');
@@ -15,14 +16,32 @@
         const dropFileLabel = document.getElementById('viewerFileName');
         const copyButton = document.getElementById('copyButton');
         const downloadButton = document.getElementById('downloadButton');
+        const downloadSelectedButton = document.getElementById('downloadSelectedButton');
+        const downloadZipButton = document.getElementById('downloadZipButton');
+        const exportModal = document.getElementById('exportModal');
+        const exportModalOverlay = document.getElementById('exportModalOverlay');
+        const closeExportModalButton = document.getElementById('closeExportModal');
+        const exportFileList = document.getElementById('exportFileList');
+        const dropPane = document.querySelector('.viewer-drop-pane');
+        const previewPane = document.querySelector('.viewer-preview-pane');
+        const previewShell = document.querySelector('.preview-shell');
+        const layoutMediaQuery = window.matchMedia ? window.matchMedia('(min-width: 960px)') : null;
         const fileList = document.getElementById('fileList');
         const fileCount = document.getElementById('fileCount');
         const editor = document.getElementById('fileEditor');
         const activeFileName = document.getElementById('activeFileName');
         const activeFileMeta = document.getElementById('activeFileMeta');
+        const selectAllCheckbox = document.getElementById('selectAllFiles');
+        const clearSelectionButton = document.getElementById('clearSelectionButton');
+        const selectedCountLabel = document.getElementById('selectedCount');
+        const exportExtensionInput = document.getElementById('exportExtension');
 
         if (!dropZone || !fileInput || !editor) {
             return;
+        }
+
+        if (exportModal) {
+            exportModal.setAttribute('aria-hidden', exportModal.classList.contains('hidden') ? 'true' : 'false');
         }
 
         const supportsClipboard = Boolean(navigator.clipboard);
@@ -68,12 +87,19 @@
 
         const state = {
             files: [],
-            activeId: null
+            activeId: null,
+            selectedIds: new Set(),
+            exportExtension: ''
         };
 
         const persistState = () => {
             try {
-                const payload = JSON.stringify({ files: state.files, activeId: state.activeId });
+                const payload = JSON.stringify({
+                    files: state.files,
+                    activeId: state.activeId,
+                    selectedIds: Array.from(state.selectedIds),
+                    exportExtension: state.exportExtension || ''
+                });
                 localStorage.setItem(STORAGE_KEY, payload);
             } catch (error) {
                 console.warn('Unable to persist viewer files.', error);
@@ -101,6 +127,177 @@
             return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
         };
 
+        const formatDateOnly = value => {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleDateString(undefined, { dateStyle: 'medium' });
+        };
+
+        const sanitizeExtension = value => {
+            if (!value) return '';
+            const trimmed = String(value).trim();
+            if (!trimmed) return '';
+            const withDot = trimmed.startsWith('.') ? trimmed : `.${trimmed}`;
+            return withDot.replace(/^\.+/, '.');
+        };
+
+        const getExportExtension = () => sanitizeExtension(state.exportExtension || '');
+
+        const buildDownloadName = (fileName, extension) => {
+            if (!extension) return fileName;
+            const lastDot = fileName.lastIndexOf('.');
+            const base = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+            return `${base}${extension}`;
+        };
+
+        const escapeAttribute = value => String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        const pruneSelection = () => {
+            const validIds = new Set(state.files.map(file => file.id));
+            let changed = false;
+            state.selectedIds.forEach(id => {
+                if (!validIds.has(id)) {
+                    state.selectedIds.delete(id);
+                    changed = true;
+                }
+            });
+            return changed;
+        };
+
+        const syncSelectionState = () => {
+            const changed = pruneSelection();
+            if (changed) persistState();
+            return changed;
+        };
+
+        const getSelectedRecords = () => state.files.filter(file => state.selectedIds.has(file.id));
+
+        const renderExportList = () => {
+            if (!exportFileList) return;
+            if (!state.files.length) {
+                exportFileList.innerHTML = '<li class="viewer-export-empty">Upload files to enable downloads.</li>';
+                return;
+            }
+
+            const markup = state.files.map(file => {
+                const isSelected = state.selectedIds.has(file.id);
+                const details = [formatBytes(file.size)]
+                    .concat(file.modifiedTime ? [`Updated ${formatTimestamp(file.modifiedTime)}`] : [])
+                    .filter(Boolean)
+                    .join(' • ');
+                const badge = file.id === state.activeId ? '<span class="viewer-export-badge">Active</span>' : '';
+                return `
+                    <li class="viewer-export-file-row">
+                        <label class="viewer-export-checkbox">
+                            <input type="checkbox" data-export-file-id="${file.id}" ${isSelected ? 'checked' : ''}>
+                            <span class="viewer-export-file-details">
+                                <span class="viewer-export-file-name">${file.name}</span>
+                                <span class="viewer-export-file-meta">${[details, badge].filter(Boolean).join(' • ') || 'Plain text'}</span>
+                            </span>
+                        </label>
+                    </li>
+                `;
+            }).join('');
+
+            exportFileList.innerHTML = markup;
+        };
+
+        const updateSelectionSummary = () => {
+            const selectedCount = getSelectedRecords().length;
+            const total = state.files.length;
+
+            if (selectAllCheckbox) {
+                selectAllCheckbox.disabled = total === 0;
+                selectAllCheckbox.checked = total > 0 && selectedCount === total;
+                selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < total;
+            }
+
+            if (clearSelectionButton) {
+                clearSelectionButton.disabled = selectedCount === 0;
+            }
+
+            if (selectedCountLabel) {
+                selectedCountLabel.textContent = selectedCount === 0
+                    ? 'No files selected'
+                    : selectedCount === 1
+                        ? '1 file selected'
+                        : `${selectedCount} files selected`;
+            }
+
+            if (downloadSelectedButton) {
+                downloadSelectedButton.disabled = selectedCount === 0;
+                downloadSelectedButton.textContent = selectedCount > 1
+                    ? `Download ${selectedCount} files`
+                    : 'Download selected';
+            }
+
+            if (downloadZipButton) {
+                const hasZipSupport = Boolean(window.JSZip);
+                downloadZipButton.disabled = total === 0 || !hasZipSupport;
+                downloadZipButton.textContent = selectedCount
+                    ? 'Download ZIP (selected)'
+                    : 'Download ZIP (all)';
+                if (hasZipSupport) {
+                    downloadZipButton.removeAttribute('title');
+                } else {
+                    downloadZipButton.title = 'ZIP downloads are not available in this browser.';
+                }
+            }
+        };
+
+        const refreshExportPanel = (options = {}) => {
+            const { autoSelectActive = false } = options;
+            syncSelectionState();
+            if (autoSelectActive && !state.selectedIds.size && state.activeId) {
+                state.selectedIds.add(state.activeId);
+                persistState();
+            }
+            renderExportList();
+            updateSelectionSummary();
+        };
+
+        const isExportModalOpen = () => Boolean(exportModal && !exportModal.classList.contains('hidden'));
+
+        const openExportModal = () => {
+            if (!exportModal || !state.files.length) return;
+            refreshExportPanel({ autoSelectActive: true });
+            exportModal.classList.remove('hidden');
+            exportModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('viewer-modal-open');
+            rootElement.classList.add('viewer-modal-open');
+            setTimeout(() => {
+                exportExtensionInput?.focus();
+            }, 0);
+        };
+
+        const closeExportModal = () => {
+            if (!exportModal) return;
+            const wasOpen = !exportModal.classList.contains('hidden');
+            exportModal.classList.add('hidden');
+            exportModal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('viewer-modal-open');
+            rootElement.classList.remove('viewer-modal-open');
+            if (wasOpen) {
+                downloadButton?.focus();
+            }
+        };
+
+        const triggerDownload = (content, mimeType, filename) => {
+            const blob = content instanceof Blob ? content : new Blob([content || ''], { type: mimeType || 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = filename || 'file.txt';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+        };
+
         const setStatus = () => {};
 
         const generateId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -123,6 +320,19 @@
             }
         }
 
+        if (Array.isArray(restoredState?.selectedIds)) {
+            restoredState.selectedIds.forEach(id => state.selectedIds.add(id));
+        }
+
+        if (typeof restoredState?.exportExtension === 'string') {
+            const sanitized = sanitizeExtension(restoredState.exportExtension);
+            state.exportExtension = sanitized || restoredState.exportExtension || '';
+        }
+
+        if (exportExtensionInput) {
+            exportExtensionInput.value = state.exportExtension;
+        }
+
         const getActiveFile = () => state.files.find(file => file.id === state.activeId) || null;
 
         const isTextFile = file => {
@@ -134,25 +344,79 @@
             return TEXT_EXTENSIONS.some(ext => name.endsWith(ext));
         };
 
+        const shouldSyncColumns = () => {
+            if (layoutMediaQuery) return layoutMediaQuery.matches;
+            return window.innerWidth >= 960;
+        };
+
+        const syncColumnHeights = () => {
+            if (!dropPane || !previewPane) return;
+            if (!shouldSyncColumns()) {
+                dropPane.style.height = '';
+                dropPane.style.maxHeight = '';
+                return;
+            }
+            const previewHeight = previewPane.getBoundingClientRect().height;
+            if (!previewHeight) return;
+            dropPane.style.height = `${previewHeight}px`;
+            dropPane.style.maxHeight = `${previewHeight}px`;
+        };
+
+        if (window.ResizeObserver) {
+            const previewObserver = new ResizeObserver(() => {
+                syncColumnHeights();
+            });
+            previewPane && previewObserver.observe(previewPane);
+            previewShell && previewObserver.observe(previewShell);
+            editor && previewObserver.observe(editor);
+        }
+
+        window.addEventListener('resize', syncColumnHeights);
+        layoutMediaQuery?.addEventListener?.('change', syncColumnHeights);
+        if (layoutMediaQuery && layoutMediaQuery.addEventListener === undefined && layoutMediaQuery.addListener) {
+            layoutMediaQuery.addListener(syncColumnHeights);
+        }
+
         const renderFileList = () => {
             if (!fileList || !fileCount) return;
             if (!state.files.length) {
                 fileList.innerHTML = '<li class="viewer-file-empty">Drop files to populate your library.</li>';
                 fileCount.textContent = '0 files';
+                refreshExportPanel();
+                syncColumnHeights();
                 return;
             }
 
             const markup = state.files.map(file => {
                 const isActive = file.id === state.activeId;
-                const details = [formatBytes(file.size)]
-                    .concat(file.modifiedTime ? [`Updated ${formatTimestamp(file.modifiedTime)}`] : [])
-                    .filter(Boolean)
-                    .join(' • ');
+                const detailParts = [];
+                const sizeLabel = formatBytes(file.size);
+                if (sizeLabel) detailParts.push(sizeLabel);
+                const updatedLabel = file.modifiedTime ? formatDateOnly(file.modifiedTime) : '';
+                if (updatedLabel) detailParts.push(updatedLabel);
+                const metaMarkup = (detailParts.length ? detailParts : ['Plain'])
+                    .map(part => `<span class="viewer-file-chip">${escapeAttribute(part)}</span>`)
+                    .join('');
+                const safeName = escapeAttribute(file.name || 'file');
+                const extMatch = (file.name || '').match(/\.([^.]+)$/);
+                const extension = extMatch ? extMatch[1] : '';
+                const typeLabel = extension ? `<span class="viewer-file-chip viewer-file-type-chip">${escapeAttribute(extension.toUpperCase())}</span>` : '';
+                const baseName = escapeAttribute((file.name || '').replace(/\.[^/.]+$/, '') || 'file');
                 return `
-                    <li>
+                    <li class="viewer-file-row${isActive ? ' active' : ''}">
+                        <button type="button" class="viewer-file-delete" data-delete-file-id="${file.id}" aria-label="Remove ${safeName}">
+                            <svg class="viewer-file-delete-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                                <path d="M6 2 5 3H3v1h10V3h-2l-1-1H6zm-2 4v7c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V6H4zm2 1h1v5H6V7zm4 0h-1v5h1V7z"/>
+                            </svg>
+                            <span class="sr-only">Remove ${safeName}</span>
+                        </button>
                         <button type="button" role="option" aria-selected="${isActive}" class="viewer-file-button${isActive ? ' active' : ''}" data-file-id="${file.id}">
-                            <span class="viewer-file-name">${file.name}</span>
-                            <span class="viewer-file-meta">${details || 'Plain text'}</span>
+                            <div class="viewer-file-card">
+                                <div class="viewer-file-heading">
+                                    <span class="viewer-file-name">${baseName}</span>
+                                </div>
+                                <div class="viewer-file-meta">${typeLabel}${metaMarkup}</div>
+                            </div>
                         </button>
                     </li>
                 `;
@@ -160,6 +424,8 @@
 
             fileList.innerHTML = markup;
             fileCount.textContent = state.files.length === 1 ? '1 file' : `${state.files.length} files`;
+            refreshExportPanel();
+            syncColumnHeights();
         };
 
         const renderActiveFile = () => {
@@ -201,6 +467,22 @@
                 dropFileLabel.textContent = sizeLabel ? `${active.name} (${sizeLabel})` : active.name;
             }
             renderFileList();
+        };
+
+        const deleteFileById = fileId => {
+            const index = state.files.findIndex(file => file.id === fileId);
+            if (index === -1) return;
+            const removedActive = state.activeId === fileId;
+            state.files.splice(index, 1);
+            state.selectedIds.delete(fileId);
+            if (!state.files.length) {
+                state.activeId = null;
+            } else if (removedActive) {
+                const fallbackIndex = index < state.files.length ? index : state.files.length - 1;
+                state.activeId = state.files[fallbackIndex]?.id || state.files[0].id;
+            }
+            persistState();
+            renderActiveFile();
         };
 
         const addFileRecord = (file, content) => {
@@ -259,25 +541,45 @@
         const clearAll = () => {
             state.files = [];
             state.activeId = null;
+            state.selectedIds.clear();
+            state.exportExtension = '';
             fileInput.value = '';
+            if (exportExtensionInput) exportExtensionInput.value = '';
+            closeExportModal();
             renderActiveFile();
             setStatus('No files uploaded yet.');
             if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
             clearPersistedState();
         };
 
-        const downloadActiveFile = () => {
-            const active = getActiveFile();
-            if (!active || !downloadButton) return;
-            const blob = new Blob([active.content || ''], { type: active.type || 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = active.name || 'file.txt';
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-            URL.revokeObjectURL(url);
+        const downloadSelectedRecords = () => {
+            const selection = getSelectedRecords();
+            if (!selection.length) return false;
+            const extension = getExportExtension();
+            selection.forEach(record => {
+                const filename = buildDownloadName(record.name, extension);
+                triggerDownload(record.content || '', record.type || 'text/plain', filename);
+            });
+            return true;
+        };
+
+        const downloadRecordsAsZip = async records => {
+            if (!records.length || !window.JSZip) return false;
+            const extension = getExportExtension();
+            const zip = new window.JSZip();
+            records.forEach(record => {
+                const filename = buildDownloadName(record.name, extension);
+                zip.file(filename, record.content || '', { binary: false });
+            });
+            try {
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const zipName = records.length === state.files.length ? 'file-library.zip' : 'selected-files.zip';
+                triggerDownload(blob, 'application/zip', zipName);
+                return true;
+            } catch (error) {
+                console.warn('Unable to prepare the zip archive.', error);
+                return false;
+            }
         };
 
         const copyActiveFile = async () => {
@@ -304,7 +606,63 @@
         clearButton?.addEventListener('click', clearAll);
 
         copyButton?.addEventListener('click', copyActiveFile);
-        downloadButton?.addEventListener('click', downloadActiveFile);
+        downloadButton?.addEventListener('click', openExportModal);
+        downloadSelectedButton?.addEventListener('click', () => {
+            const performed = downloadSelectedRecords();
+            if (performed) {
+                closeExportModal();
+            }
+        });
+        downloadZipButton?.addEventListener('click', async () => {
+            const selection = getSelectedRecords();
+            const targets = selection.length ? selection : state.files;
+            if (!targets.length || !window.JSZip) return;
+            const previousLabel = downloadZipButton.textContent;
+            downloadZipButton.disabled = true;
+            downloadZipButton.textContent = 'Preparing ZIP…';
+            try {
+                const success = await downloadRecordsAsZip(targets);
+                if (success) {
+                    closeExportModal();
+                }
+            } finally {
+                downloadZipButton.textContent = previousLabel;
+                refreshExportPanel();
+            }
+        });
+
+        closeExportModalButton?.addEventListener('click', closeExportModal);
+        exportModalOverlay?.addEventListener('click', closeExportModal);
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && isExportModalOpen()) {
+                event.preventDefault();
+                closeExportModal();
+            }
+        });
+
+        selectAllCheckbox?.addEventListener('change', event => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) return;
+            if (!state.files.length) {
+                target.checked = false;
+                target.indeterminate = false;
+                return;
+            }
+            if (target.checked) {
+                state.files.forEach(file => state.selectedIds.add(file.id));
+            } else {
+                state.selectedIds.clear();
+            }
+            persistState();
+            refreshExportPanel();
+        });
+
+        clearSelectionButton?.addEventListener('click', () => {
+            if (!state.selectedIds.size) return;
+            state.selectedIds.clear();
+            persistState();
+            refreshExportPanel();
+        });
 
         dropZone.addEventListener('dragover', event => {
             event.preventDefault();
@@ -335,6 +693,16 @@
         });
 
         fileList?.addEventListener('click', event => {
+            const deleteButton = event.target.closest('[data-delete-file-id]');
+            if (deleteButton) {
+                const fileId = deleteButton.getAttribute('data-delete-file-id');
+                if (fileId) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    deleteFileById(fileId);
+                }
+                return;
+            }
             const button = event.target.closest('[data-file-id]');
             if (!button) return;
             state.activeId = button.getAttribute('data-file-id');
@@ -342,12 +710,50 @@
             persistState();
         });
 
+        exportFileList?.addEventListener('change', event => {
+            const target = event.target;
+            if (!(target instanceof HTMLInputElement)) return;
+            if (!target.matches('[data-export-file-id]')) return;
+            const fileId = target.getAttribute('data-export-file-id');
+            if (!fileId) return;
+            if (target.checked) {
+                state.selectedIds.add(fileId);
+            } else {
+                state.selectedIds.delete(fileId);
+            }
+            persistState();
+            refreshExportPanel();
+        });
+
         editor.addEventListener('input', () => {
             const active = getActiveFile();
             if (!active) return;
             active.content = editor.value;
             persistState();
+            syncColumnHeights();
         });
+
+        ['mouseup', 'keyup'].forEach(eventName => {
+            editor.addEventListener(eventName, () => {
+                requestAnimationFrame(() => {
+                    syncColumnHeights();
+                });
+            });
+        });
+
+        exportExtensionInput?.addEventListener('input', () => {
+            state.exportExtension = exportExtensionInput.value;
+            persistState();
+        });
+
+        exportExtensionInput?.addEventListener('blur', () => {
+            const normalized = sanitizeExtension(exportExtensionInput.value);
+            exportExtensionInput.value = normalized;
+            state.exportExtension = normalized;
+            persistState();
+        });
+
+        syncColumnHeights();
 
         if (state.files.length) {
             renderActiveFile();

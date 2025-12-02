@@ -11,6 +11,7 @@
     <script src="./components/footer.js" defer></script>
     <script src="./assets/js/wip-guard.js" defer></script>
     <script src="./assets/js/confirm-button.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
 </head>
 <body>
     <nav-bar></nav-bar>
@@ -78,6 +79,69 @@
     </main>
 
     <site-footer></site-footer>
+    <div
+        id="exportModal"
+        class="viewer-export-portal hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exportModalTitle"
+    >
+        <div class="viewer-export-overlay" id="exportModalOverlay" aria-hidden="true"></div>
+        <section class="viewer-export-dialog" role="document" tabindex="-1">
+            <header class="viewer-export-header">
+                <div>
+                    <p class="eyebrow">Download files</p>
+                    <h3 id="exportModalTitle">Export options</h3>
+                </div>
+                <button type="button" id="closeExportModal" class="ghost viewer-export-close">
+                    <span aria-hidden="true">&times;</span>
+                    <span class="sr-only">Close</span>
+                </button>
+            </header>
+            <div class="viewer-export-body">
+                <section class="viewer-modal-card viewer-export-selection" aria-labelledby="exportLibraryTitle">
+                    <div class="viewer-modal-card-heading">
+                        <p class="eyebrow">Selected files</p>
+                        <h4 id="exportLibraryTitle">File library</h4>
+                    </div>
+                    <div class="viewer-selection-controls">
+                        <div class="viewer-selection-toggle">
+                            <label class="viewer-select-all" for="selectAllFiles">
+                                <input id="selectAllFiles" type="checkbox" aria-label="Select all uploaded files">
+                                <span>Select all</span>
+                            </label>
+                            <button type="button" id="clearSelectionButton" class="ghost" disabled>Clear</button>
+                        </div>
+                        <p id="selectedCount" class="viewer-selection-count">No files selected</p>
+                    </div>
+                    <ul class="viewer-export-file-list" id="exportFileList">
+                        <li class="viewer-export-empty">Upload files to enable downloads.</li>
+                    </ul>
+                </section>
+                <section class="viewer-modal-card viewer-export-controls" aria-live="polite" aria-labelledby="exportOptionsTitle">
+                    <div class="viewer-modal-card-heading">
+                        <p class="eyebrow">Format &amp; download</p>
+                        <h4 id="exportOptionsTitle">Export settings</h4>
+                    </div>
+                    <label class="viewer-export-label" for="exportExtension">
+                        Export file type
+                        <input
+                            id="exportExtension"
+                            type="text"
+                            class="viewer-export-input"
+                            placeholder="Leave blank to keep original"
+                            autocomplete="off"
+                        >
+                    </label>
+                    <p class="viewer-export-hint">Example: .txt, .md, .json — applies to all downloaded files.</p>
+                    <div class="viewer-export-actions">
+                        <button id="downloadSelectedButton" class="secondary" type="button" disabled>Download selected</button>
+                        <button id="downloadZipButton" class="primary" type="button" disabled>Download ZIP</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </div>
     <script src="./assets/js/file-viewer.js" defer></script>
 </body>
 </html>
