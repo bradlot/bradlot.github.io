@@ -273,7 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const timestamp = new Date(entry.createdAt || Date.now());
             const dateChip = document.createElement('span');
             dateChip.className = 'viewer-file-chip history-date-chip';
-            dateChip.textContent = timestamp.toLocaleString();
+            dateChip.textContent = timestamp.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
             metaParagraph.append(dateChip);
 
             const actionBar = document.createElement('div');
