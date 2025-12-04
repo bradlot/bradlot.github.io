@@ -44,7 +44,7 @@
             '.conf', '.log', '.sh', '.bash', '.zsh', '.ps1', '.pl', '.lua', '.tex', '.m', '.ipynb', '.properties', '.gradle'
         ];
         const DOCUMENT_EXTENSIONS = [
-            '.csv', '.doc', '.docx', '.pdf', '.rtf', '.odt', '.ppt', '.pptx', '.xls', '.xlsx', '.pages', '.numbers', '.key'
+            '.csv', '.doc', '.docx', '.rtf', '.odt', '.ppt', '.pptx', '.xls', '.xlsx', '.pages', '.numbers', '.key'
         ];
         const TEXT_MIME_ALLOWLIST = [
             'text/plain',
@@ -62,7 +62,6 @@
             'text/csv',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/pdf',
             'application/rtf',
             'application/vnd.oasis.opendocument.text',
             'application/vnd.ms-powerpoint',
@@ -74,9 +73,9 @@
             'application/vnd.apple.keynote'
         ];
         const DOCX_MIME_TYPES = [
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/msword'
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         ];
+        const DOC_MIME_TYPES = ['application/msword'];
         const ALLOWED_EXTENSIONS = [...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS];
         const ALLOWED_MIME_TYPES = [...TEXT_MIME_ALLOWLIST, ...DOCUMENT_MIME_ALLOWLIST];
 
@@ -149,6 +148,29 @@
             if (!trimmed) return '';
             const withDot = trimmed.startsWith('.') ? trimmed : `.${trimmed}`;
             return withDot.replace(/^\.+/, '.');
+        };
+
+        const getExtensionLabel = name => {
+            if (!name) return '';
+            const match = String(name).match(/\.([^.]+)$/);
+            return match ? match[1].toUpperCase() : '';
+        };
+
+        const getFileTypeLabel = file => {
+            if (!file) return '';
+            const extLabel = getExtensionLabel(file.name);
+            if (extLabel) return extLabel;
+            const type = (file.type || '').toLowerCase();
+            const typeMap = {
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+                'application/msword': 'DOC',
+                'application/rtf': 'RTF',
+                'application/json': 'JSON',
+                'text/plain': 'TXT'
+            };
+            if (typeMap[type]) return typeMap[type];
+            if (type.startsWith('text/')) return 'TEXT';
+            return file.type || '';
         };
 
         const buildDownloadName = (fileName, extension) => {
@@ -246,6 +268,14 @@
             return name.endsWith('.docx');
         };
 
+        const isDocFile = file => {
+            if (!file) return false;
+            const name = (file.name || '').toLowerCase();
+            const type = (file.type || '').toLowerCase();
+            if (DOC_MIME_TYPES.includes(type)) return true;
+            return name.endsWith('.doc') && !name.endsWith('.docx');
+        };
+
         const shouldSyncColumns = () => {
             if (layoutMediaQuery) return layoutMediaQuery.matches;
             return window.innerWidth >= 960;
@@ -340,7 +370,7 @@
                     copyButton.textContent = copyButtonLabel;
                 }
                 activeFileName && (activeFileName.textContent = 'No file selected');
-                activeFileMeta && (activeFileMeta.textContent = 'Drop files on the left to load their contents.');
+                activeFileMeta && (activeFileMeta.textContent = 'Drop files to the left to load their contents.');
                 if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
                 renderFileList();
                 return;
@@ -358,7 +388,8 @@
             if (activeFileMeta) {
                 const parts = [];
                 if (active.size) parts.push(formatBytes(active.size));
-                if (active.type) parts.push(active.type);
+                const typeLabel = getFileTypeLabel(active);
+                if (typeLabel) parts.push(typeLabel);
                 if (active.modifiedTime) parts.push(`Updated ${formatTimestamp(active.modifiedTime)}`);
                 activeFileMeta.textContent = parts.length ? parts.join(' • ') : 'Uploaded file';
             }
@@ -429,37 +460,132 @@
             }
         });
 
+        const extractBinaryDocText = buffer => {
+            const bytes = new Uint8Array(buffer);
+
+            const isPrintable = byte => (byte >= 32 && byte <= 126) || byte === 9;
+
+            const hasWordChar = text => /[A-Za-z0-9]/.test(text);
+            const passesQuality = text => {
+                if (!text) return false;
+                const letters = (text.match(/[A-Za-z]/g) || []).length;
+                const minLetters = Math.max(3, Math.ceil(text.length * 0.25));
+                return letters >= minLetters;
+            };
+
+            const collectAsciiSequences = () => {
+                const segments = [];
+                let current = [];
+                const flush = () => {
+                    if (current.length >= 4) {
+                        const value = current.join('').trim();
+                        if (value && hasWordChar(value) && passesQuality(value)) segments.push(value);
+                    }
+                    current = [];
+                };
+                for (let i = 0; i < bytes.length; i += 1) {
+                    const byte = bytes[i];
+                    if (isPrintable(byte)) {
+                        current.push(String.fromCharCode(byte));
+                    } else if (byte === 10 || byte === 13) {
+                        current.push('\n');
+                        flush();
+                    } else {
+                        flush();
+                    }
+                }
+                flush();
+                return segments;
+            };
+
+            const collectUtf16Sequences = () => {
+                const segments = [];
+                let current = [];
+                const flush = () => {
+                    if (current.length >= 4) {
+                        const value = current.join('').trim();
+                        if (value && hasWordChar(value) && passesQuality(value)) segments.push(value);
+                    }
+                    current = [];
+                };
+                for (let i = 0; i + 1 < bytes.length; i += 2) {
+                    const byte = bytes[i];
+                    const next = bytes[i + 1];
+                    const isNullTerminated = next === 0 && isPrintable(byte);
+                    const isNewline = byte === 0 && (next === 10 || next === 13);
+                    if (isNullTerminated) {
+                        current.push(String.fromCharCode(byte));
+                    } else if (isNewline) {
+                        current.push('\n');
+                        flush();
+                    } else {
+                        flush();
+                    }
+                }
+                flush();
+                return segments;
+            };
+
+            const ascii = collectAsciiSequences().join('\n');
+            const utf16 = collectUtf16Sequences().join('\n');
+            const preferred = utf16.trim().length > ascii.trim().length ? utf16 : ascii;
+            return preferred
+                .replace(/\n{3,}/g, '\n\n')
+                .replace(/[ \t]{3,}/g, ' ')
+                .trim();
+        };
+
         const extractDocxText = xmlString => {
             if (!xmlString) return '';
+
+            const regexFallback = () => {
+                const paragraphs = [];
+                const blocks = xmlString.match(/<w:p[\s\S]*?<\/w:p>/gi) || [];
+                blocks.forEach(block => {
+                    const cleaned = block
+                        .replace(/<w:tab\/?>/gi, '\t')
+                        .replace(/<w:br\/?>/gi, '\n');
+                    const matches = cleaned.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/gi) || [];
+                    const text = matches.map(match => match.replace(/<[^>]+>/g, '')).join('');
+                    if (text.trim()) paragraphs.push(text);
+                });
+                if (!paragraphs.length) {
+                    const matches = xmlString.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/gi) || [];
+                    return matches.map(match => match.replace(/<[^>]+>/g, '')).join(' ');
+                }
+                return paragraphs.join('\n\n');
+            };
+
             const parser = window.DOMParser ? new DOMParser() : null;
             if (parser) {
                 const doc = parser.parseFromString(xmlString, 'application/xml');
                 if (!doc.querySelector('parsererror')) {
                     const paragraphs = [];
-                    doc.querySelectorAll('w\\:p').forEach(paragraph => {
+                    const paragraphNodes = Array.from(doc.getElementsByTagName('w:p'));
+                    const fallbackParagraphs = paragraphNodes.length ? paragraphNodes : Array.from(doc.getElementsByTagName('p'));
+                    fallbackParagraphs.forEach(paragraph => {
                         const fragments = [];
-                        paragraph.querySelectorAll('w\\:t, w\\:br, w\\:tab').forEach(node => {
-                            const tag = (node.tagName || '').toLowerCase();
-                            if (tag.endsWith(':t')) {
-                                fragments.push(node.textContent || '');
-                            } else if (tag.endsWith(':tab')) {
-                                fragments.push('\t');
-                            } else if (tag.endsWith(':br')) {
-                                fragments.push('\n');
+                        const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+                        while (walker.nextNode()) {
+                            const node = walker.currentNode;
+                            if (node.nodeType === Node.TEXT_NODE) {
+                                fragments.push(node.nodeValue || '');
+                                continue;
                             }
-                        });
-                        paragraphs.push(fragments.join(''));
+                            const tag = (node.tagName || '').toLowerCase();
+                            if (tag.endsWith(':t')) fragments.push(node.textContent || '');
+                            else if (tag.endsWith(':tab')) fragments.push('\t');
+                            else if (tag.endsWith(':br')) fragments.push('\n');
+                        }
+                        const content = fragments.join('');
+                        if (content.trim()) paragraphs.push(content);
                     });
-                    return paragraphs.join('\n\n');
+                    const combined = paragraphs.join('\n\n');
+                    if (combined.trim()) return combined;
                 }
             }
-            const textNodes = [];
-            const matches = xmlString.match(/<w:t[^>]*>([^<]*)<\/w:t>/gi) || [];
-            matches.forEach(match => {
-                const content = match.replace(/<[^>]+>/g, '');
-                textNodes.push(content);
-            });
-            return textNodes.join(' ');
+
+            return regexFallback();
         };
 
         const readDocxAsText = async file => {
@@ -471,6 +597,36 @@
             if (!documentFile) throw new Error('Missing document content.');
             const xml = await documentFile.async('text');
             return extractDocxText(xml);
+        };
+
+        const readDocAsText = async file => {
+            const buffer = await readFileAsArrayBuffer(file);
+            const extracted = extractBinaryDocText(buffer);
+            if (extracted && extracted.trim()) return extracted;
+            try {
+                return await readFileAsText(file);
+            } catch (error) {
+                return '';
+            }
+        };
+
+        const readFileContent = async file => {
+            if (isDocxFile(file)) {
+                try {
+                    const docxText = await readDocxAsText(file);
+                    if (docxText && docxText.trim()) return docxText;
+                } catch (error) {
+                    console.error('DOCX parse failed, falling back to raw text', error);
+                }
+            } else if (isDocFile(file)) {
+                try {
+                    const docText = await readDocAsText(file);
+                    if (docText && docText.trim()) return docText;
+                } catch (error) {
+                    console.error('DOC parse failed, falling back to raw text', error);
+                }
+            }
+            return readFileAsText(file);
         };
 
         const handleFiles = async fileListLike => {
@@ -488,7 +644,7 @@
                     continue;
                 }
                 try {
-                    const text = isDocxFile(file) ? await readDocxAsText(file) : await readFileAsText(file);
+                    const text = await readFileContent(file);
                     addFileRecord(file, text);
                     accepted += 1;
                 } catch (error) {
