@@ -43,6 +43,9 @@
             '.c', '.h', '.cpp', '.hpp', '.cs', '.go', '.swift', '.kt', '.sql', '.yaml', '.yml', '.ini', '.cfg',
             '.conf', '.log', '.sh', '.bash', '.zsh', '.ps1', '.pl', '.lua', '.tex', '.m', '.ipynb', '.properties', '.gradle'
         ];
+        const DOCUMENT_EXTENSIONS = [
+            '.csv', '.doc', '.docx', '.pdf', '.rtf', '.odt', '.ppt', '.pptx', '.xls', '.xlsx', '.pages', '.numbers', '.key'
+        ];
         const TEXT_MIME_ALLOWLIST = [
             'text/plain',
             'application/json',
@@ -55,6 +58,23 @@
             'application/x-yaml',
             'application/x-shellscript'
         ];
+        const DOCUMENT_MIME_ALLOWLIST = [
+            'text/csv',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/pdf',
+            'application/rtf',
+            'application/vnd.oasis.opendocument.text',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.apple.pages',
+            'application/vnd.apple.numbers',
+            'application/vnd.apple.keynote'
+        ];
+        const ALLOWED_EXTENSIONS = [...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS];
+        const ALLOWED_MIME_TYPES = [...TEXT_MIME_ALLOWLIST, ...DOCUMENT_MIME_ALLOWLIST];
 
         const STORAGE_KEY = 'fileViewerState';
 
@@ -205,13 +225,13 @@
 
         const getActiveFile = () => state.files.find(file => file.id === state.activeId) || null;
 
-        const isTextFile = file => {
+        const isAllowedFile = file => {
             if (!file) return false;
             const name = (file.name || '').toLowerCase();
             const type = (file.type || '').toLowerCase();
             if (type.startsWith('text/')) return true;
-            if (TEXT_MIME_ALLOWLIST.includes(type)) return true;
-            return TEXT_EXTENSIONS.some(ext => name.endsWith(ext));
+            if (ALLOWED_MIME_TYPES.includes(type)) return true;
+            return ALLOWED_EXTENSIONS.some(ext => name.endsWith(ext));
         };
 
         const shouldSyncColumns = () => {
@@ -328,7 +348,7 @@
                 if (active.size) parts.push(formatBytes(active.size));
                 if (active.type) parts.push(active.type);
                 if (active.modifiedTime) parts.push(`Updated ${formatTimestamp(active.modifiedTime)}`);
-                activeFileMeta.textContent = parts.length ? parts.join(' • ') : 'Editable plain text';
+                activeFileMeta.textContent = parts.length ? parts.join(' • ') : 'Uploaded file';
             }
             if (dropFileLabel) {
                 const sizeLabel = formatBytes(active.size);
@@ -390,7 +410,7 @@
 
             let accepted = 0;
             files.forEach(file => {
-                if (!isTextFile(file)) {
+                if (!isAllowedFile(file)) {
                     setStatus(`Skipped ${file.name} (unsupported format).`, true);
                     return;
                 }
@@ -401,7 +421,7 @@
             });
 
             if (!accepted) {
-                setStatus('No supported text files were added.', true);
+                setStatus('No supported files were added.', true);
                 if (dropFileLabel) dropFileLabel.textContent = 'No file selected';
             }
         };
