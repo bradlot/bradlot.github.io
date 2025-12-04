@@ -73,6 +73,10 @@
             'application/vnd.apple.numbers',
             'application/vnd.apple.keynote'
         ];
+        const DOCX_MIME_TYPES = [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/msword'
+        ];
         const ALLOWED_EXTENSIONS = [...TEXT_EXTENSIONS, ...DOCUMENT_EXTENSIONS];
         const ALLOWED_MIME_TYPES = [...TEXT_MIME_ALLOWLIST, ...DOCUMENT_MIME_ALLOWLIST];
 
@@ -232,6 +236,14 @@
             if (type.startsWith('text/')) return true;
             if (ALLOWED_MIME_TYPES.includes(type)) return true;
             return ALLOWED_EXTENSIONS.some(ext => name.endsWith(ext));
+        };
+
+        const isDocxFile = file => {
+            if (!file) return false;
+            const name = (file.name || '').toLowerCase();
+            const type = (file.type || '').toLowerCase();
+            if (DOCX_MIME_TYPES.includes(type)) return true;
+            return name.endsWith('.docx');
         };
 
         const shouldSyncColumns = () => {
@@ -400,7 +412,68 @@
             }
         });
 
-        const handleFiles = fileListLike => {
+        const readFileAsArrayBuffer = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (reader.result instanceof ArrayBuffer) {
+                    resolve(reader.result);
+                } else {
+                    reject(new Error('Unable to read file data.'));
+                }
+            };
+            reader.onerror = () => reject(reader.error || new Error('Unable to read file.'));
+            try {
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+        const extractDocxText = xmlString => {
+            if (!xmlString) return '';
+            const parser = window.DOMParser ? new DOMParser() : null;
+            if (parser) {
+                const doc = parser.parseFromString(xmlString, 'application/xml');
+                if (!doc.querySelector('parsererror')) {
+                    const paragraphs = [];
+                    doc.querySelectorAll('w\\:p').forEach(paragraph => {
+                        const fragments = [];
+                        paragraph.querySelectorAll('w\\:t, w\\:br, w\\:tab').forEach(node => {
+                            const tag = (node.tagName || '').toLowerCase();
+                            if (tag.endsWith(':t')) {
+                                fragments.push(node.textContent || '');
+                            } else if (tag.endsWith(':tab')) {
+                                fragments.push('\t');
+                            } else if (tag.endsWith(':br')) {
+                                fragments.push('\n');
+                            }
+                        });
+                        paragraphs.push(fragments.join(''));
+                    });
+                    return paragraphs.join('\n\n');
+                }
+            }
+            const textNodes = [];
+            const matches = xmlString.match(/<w:t[^>]*>([^<]*)<\/w:t>/gi) || [];
+            matches.forEach(match => {
+                const content = match.replace(/<[^>]+>/g, '');
+                textNodes.push(content);
+            });
+            return textNodes.join(' ');
+        };
+
+        const readDocxAsText = async file => {
+            const zipLib = window.JSZip;
+            if (!zipLib) throw new Error('JSZip is unavailable.');
+            const buffer = await readFileAsArrayBuffer(file);
+            const zip = await zipLib.loadAsync(buffer);
+            const documentFile = zip.file('word/document.xml');
+            if (!documentFile) throw new Error('Missing document content.');
+            const xml = await documentFile.async('text');
+            return extractDocxText(xml);
+        };
+
+        const handleFiles = async fileListLike => {
             const files = Array.from(fileListLike || []);
             if (!files.length) {
                 setStatus('No files were detected.', true);
@@ -409,16 +482,20 @@
             }
 
             let accepted = 0;
-            files.forEach(file => {
+            for (const file of files) {
                 if (!isAllowedFile(file)) {
                     setStatus(`Skipped ${file.name} (unsupported format).`, true);
-                    return;
+                    continue;
                 }
-                accepted += 1;
-                readFileAsText(file)
-                    .then(text => addFileRecord(file, text))
-                    .catch(() => setStatus(`Unable to read ${file.name}.`, true));
-            });
+                try {
+                    const text = isDocxFile(file) ? await readDocxAsText(file) : await readFileAsText(file);
+                    addFileRecord(file, text);
+                    accepted += 1;
+                } catch (error) {
+                    console.error('Unable to parse file', error);
+                    setStatus(`Unable to read ${file.name}.`, true);
+                }
+            }
 
             if (!accepted) {
                 setStatus('No supported files were added.', true);

@@ -268,10 +268,13 @@ document.addEventListener('DOMContentLoaded', () => {
             inTextParagraph.appendChild(label);
             inTextParagraph.append(` ${entry.inText}`);
 
-            const metaParagraph = document.createElement('p');
+            const metaParagraph = document.createElement('div');
             metaParagraph.className = 'history-meta';
             const timestamp = new Date(entry.createdAt || Date.now());
-            metaParagraph.textContent = `Created ${timestamp.toLocaleString()}`;
+            const dateChip = document.createElement('span');
+            dateChip.className = 'viewer-file-chip history-date-chip';
+            dateChip.textContent = timestamp.toLocaleString();
+            metaParagraph.append(dateChip);
 
             const actionBar = document.createElement('div');
             actionBar.className = 'history-actions';
