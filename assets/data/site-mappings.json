@@ -218,7 +218,26 @@
     "vice.com": "Vice",
     "vox.com": "Vox",
     "slate.com": "Slate",
-    "c-span.org": "C-SPAN"
+    "c-span.org": "C-SPAN",
+    "finance.yahoo.com": "Yahoo Finance",
+    "yahoo.com": "Yahoo",
+    "news.yahoo.com": "Yahoo News",
+    "sports.yahoo.com": "Yahoo Sports",
+    "money.yahoo.com": "Yahoo Finance",
+    "marketwatch.com": "MarketWatch",
+    "barrons.com": "Barron's",
+    "investopedia.com": "Investopedia",
+    "seekingalpha.com": "Seeking Alpha",
+    "fool.com": "The Motley Fool",
+    "benzinga.com": "Benzinga",
+    "techcrunch.com": "TechCrunch",
+    "theverge.com": "The Verge",
+    "engadget.com": "Engadget",
+    "arstechnica.com": "Ars Technica",
+    "cnet.com": "CNET",
+    "zdnet.com": "ZDNet",
+    "venturebeat.com": "VentureBeat",
+    "mashable.com": "Mashable"
   },
   "Major News Outlets (Global)": {
     "bbc.com": "BBC (British Broadcasting Corporation)",
@@ -322,7 +341,10 @@
     "facebook.com": "Facebook",
     "instagram.com": "Instagram",
     "whatsapp.com": "WhatsApp",
-    "youtube.com": "YouTube"
+    "youtube.com": "YouTube",
+    "blog.google": "Google Blog",
+    "blog.youtube": "YouTube Blog",
+    "about.fb.com": "Meta Newsroom"
   },
   "Technology (Software, Services & Hardware)": {
     "nvidia.com": "NVIDIA",
@@ -381,6 +403,7 @@
     "vimeo.com": "Vimeo",
     "wikimedia.org": "Wikimedia Foundation",
     "wikipedia.org": "Wikipedia",
+    "en.wikipedia.org": "Wikipedia",
     "ebay.com": "eBay",
     "alibaba.com": "Alibaba Group",
     "aliexpress.com": "AliExpress",
@@ -402,7 +425,9 @@
     "bestbuy.com": "Best Buy",
     "zillow.com": "Zillow",
     "booking.com": "Booking.com",
-    "expediagroup.com": "Expedia Group"
+    "expediagroup.com": "Expedia Group",
+    "tripadvisor.com": "Tripadvisor",
+    "yelp.com": "Yelp"
   },
   "Finance (Banking & Investment)": {
     "jpmorganchase.com": "JPMorgan Chase & Co.",
@@ -443,7 +468,11 @@
     "commonwealthbank.com.au": "Commonwealth Bank",
     "westpac.com.au": "Westpac",
     "anz.com": "ANZ",
-    "nab.com.au": "National Australia Bank (NAB)"
+    "nab.com.au": "National Australia Bank (NAB)",
+    "federalreserve.gov": "Federal Reserve",
+    "sec.gov": "U.S. Securities and Exchange Commission",
+    "treasury.gov": "U.S. Department of the Treasury",
+    "fdic.gov": "Federal Deposit Insurance Corporation"
   },
   "Finance (Payments & Insurance)": {
     "visa.com": "Visa Inc.",
@@ -507,6 +536,19 @@
     "bostonscientific.com": "Boston Scientific",
     "thermofisher.com": "Thermo Fisher Scientific",
     "danaher.com": "Danaher"
+  },
+  "Health & Medical": {
+    "mayoclinic.org": "Mayo Clinic",
+    "clevelandclinic.org": "Cleveland Clinic",
+    "hopkinsmedicine.org": "Johns Hopkins Medicine",
+    "health.harvard.edu": "Harvard Health",
+    "webmd.com": "WebMD",
+    "healthline.com": "Healthline",
+    "medlineplus.gov": "MedlinePlus",
+    "drugs.com": "Drugs.com",
+    "rxlist.com": "RxList",
+    "medicalnewstoday.com": "Medical News Today",
+    "verywellhealth.com": "Verywell Health"
   },
   "Consumer Goods & Retail": {
     "procterandgamble.com": "Procter & Gamble (P&G)",

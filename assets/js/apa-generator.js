@@ -1,5 +1,4 @@
 const DEFAULT_STATUS = 'Waiting for input.';
-const PROXY_PREFIX = 'https://r.jina.ai/';
 const HISTORY_STORAGE_KEY = 'apaCitationHistory';
 let siteMappings = {};
 
@@ -30,35 +29,27 @@ const normalizeLabelValue = value => {
 
 const extractSiteMappingEntries = raw => {
     const pairs = [];
-    if (!raw) return pairs;
+    if (!raw || typeof raw !== 'object') return pairs;
+    
     const addPair = (host, label) => {
         if (!host || !label) return;
-        if (!pairs.some(([existing]) => existing === host)) {
-            pairs.push([host, label]);
+        const normalizedHost = toHostKey(host);
+        if (!pairs.some(([existing]) => existing === normalizedHost)) {
+            pairs.push([normalizedHost, label]);
         }
     };
 
-    if (Array.isArray(raw)) {
-        raw.forEach(entry => {
-            if (!entry) return;
-            if (Array.isArray(entry)) {
-                addPair(toHostKey(entry[0]), normalizeLabelValue(entry[1]));
-                return;
-            }
-            if (typeof entry === 'object') {
-                const host = entry.host || entry.hostname || entry.domain || entry.url || entry.site || entry.key;
-                const label = entry.label || entry.name || entry.title || entry.display || entry.value;
-                addPair(toHostKey(host), normalizeLabelValue(label));
+    const processObject = obj => {
+        Object.entries(obj).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+                addPair(key, value);
+            } else if (typeof value === 'object' && value !== null) {
+                processObject(value);
             }
         });
-        return pairs;
-    }
+    };
 
-    if (typeof raw === 'object') {
-        Object.entries(raw).forEach(([key, value]) => {
-            addPair(toHostKey(key), normalizeLabelValue(value));
-        });
-    }
+    processObject(raw);
     return pairs;
 };
 
@@ -101,9 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const openManualButton = document.getElementById('openManualButton');
     const manualBackButton = document.getElementById('manualBackButton');
     const manualForm = document.getElementById('manualForm');
+    const manualSubmitButton = manualForm?.querySelector('button[type="submit"]');
     const manualTitleInput = document.getElementById('manualTitle');
     const manualWebsiteInput = document.getElementById('manualWebsite');
     const manualPublisherInput = document.getElementById('manualPublisher');
+    const manualEditionInput = document.getElementById('manualEdition');
+    const manualVolumeInput = document.getElementById('manualVolume');
+    const manualCityInput = document.getElementById('manualCity');
+    const manualStateInput = document.getElementById('manualState');
     const manualUrlInput = document.getElementById('manualUrl');
     const manualShowUrlToggle = document.getElementById('manualShowUrl');
     const manualPublishedDayInput = document.getElementById('manualPublishedDay');
@@ -297,7 +293,14 @@ document.addEventListener('DOMContentLoaded', () => {
             copyInTextButton.dataset.index = String(index);
             copyInTextButton.textContent = 'Copy in-text';
 
-            actionBar.append(copyReferenceButton, copyInTextButton);
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'ghost small-button';
+            editButton.dataset.historyAction = 'edit';
+            editButton.dataset.index = String(index);
+            editButton.textContent = 'Edit';
+
+            actionBar.append(copyReferenceButton, copyInTextButton, editButton);
             body.append(referenceParagraph, inTextParagraph, metaParagraph, actionBar);
             item.append(selector, body);
             historyList.appendChild(item);
@@ -390,10 +393,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const applyManualDefaults = defaults => {
         if (!defaults) return;
-        manualForm.dataset.workType = defaults.workType || manualForm.dataset.workType || 'web';
+        const workType = defaults.workType || manualForm.dataset.workType || 'web';
+        manualForm.dataset.workType = workType;
+        document.querySelectorAll('.book-only-fields').forEach(el => {
+            el.style.display = workType === 'book' ? '' : 'none';
+        });
         if (defaults.title !== undefined) manualTitleInput.value = defaults.title;
         if (defaults.website !== undefined) manualWebsiteInput.value = defaults.website;
         if (defaults.publisher !== undefined) manualPublisherInput.value = defaults.publisher;
+        if (defaults.edition !== undefined) manualEditionInput.value = defaults.edition || '';
+        if (defaults.volume !== undefined) manualVolumeInput.value = defaults.volume || '';
+        if (defaults.city !== undefined) manualCityInput.value = defaults.city || '';
+        if (defaults.state !== undefined) manualStateInput.value = defaults.state || '';
         if (defaults.url !== undefined) manualUrlInput.value = defaults.url;
         if (defaults.showUrl !== undefined) manualShowUrlToggle.checked = Boolean(defaults.showUrl);
         if (defaults.published) setDateInputs('Published', defaults.published);
@@ -477,48 +488,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
     };
 
-    const buildProxyUrl = url => url.startsWith(PROXY_PREFIX) ? url : `${PROXY_PREFIX}${url}`;
-
-    const fetchWithProxyFallback = async (url, options = {}) => {
-        const attempt = async target => {
-            const response = await fetch(target, options).catch(() => null);
-            if (!response) throw new Error('NETWORK');
-            if (response.status === 404) throw new Error('NOT_FOUND');
-            if (!response.ok) throw new Error('NETWORK');
-            return response;
-        };
-
-        try {
-            return await attempt(url);
-        } catch (error) {
-            if (error.message === 'NOT_FOUND') throw error;
-            if (url.startsWith(PROXY_PREFIX)) throw new Error('NETWORK');
-            return attempt(buildProxyUrl(url));
-        }
-    };
-
     const fetchJson = async url => {
-        const response = await fetchWithProxyFallback(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json'
-            }
+        const response = await fetch(url, {
+            headers: { Accept: 'application/json' },
+            mode: 'cors'
         });
-        const text = await response.text();
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error('NETWORK');
-        }
+        if (!response.ok) throw new Error(response.status === 404 ? 'NOT_FOUND' : 'NETWORK');
+        return response.json();
     };
 
     const fetchHtml = async url => {
-        const response = await fetchWithProxyFallback(url, {
-            headers: {
-                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
-        });
-        return response.text();
+        try {
+            const response = await fetch(url, {
+                headers: { Accept: 'text/html' },
+                mode: 'cors'
+            });
+            if (!response.ok) throw new Error('NETWORK');
+            return response.text();
+        } catch (e) {
+            const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+            if (!response.ok) throw new Error('NETWORK');
+            return response.text();
+        }
     };
 
     const normalizePublishers = value => {
@@ -542,30 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const preferValue = (current, incoming) => current || incoming || '';
 
-    const mergeBookEntries = entries => {
-        const merged = {
-            title: '',
-            subtitle: '',
-            publish_date: '',
-            publish_year: '',
-            edition_name: '',
-            authors: [],
-            publishers: []
-        };
 
-        entries.forEach(entry => {
-            if (!entry) return;
-            merged.title = preferValue(merged.title, entry.title);
-            merged.subtitle = preferValue(merged.subtitle, entry.subtitle);
-            merged.publish_date = preferValue(merged.publish_date, entry.publish_date);
-            merged.publish_year = preferValue(merged.publish_year, entry.publish_year);
-            merged.edition_name = preferValue(merged.edition_name, entry.edition_name);
-            merged.authors = mergeUniqueEntities(merged.authors, entry.authors || []);
-            merged.publishers = mergeUniqueEntities(merged.publishers, entry.publishers || []);
-        });
-
-        return merged;
-    };
 
     const fetchOpenLibraryEditionMetadata = async isbn => {
         const book = await fetchJson(`https://openlibrary.org/isbn/${isbn}.json`);
@@ -604,12 +572,17 @@ document.addEventListener('DOMContentLoaded', () => {
             ? book.publishers.map(normalizePublishers).filter(Boolean).map(name => ({ name }))
             : [];
 
+        const publishPlaces = Array.isArray(book.publish_places) ? book.publish_places : [];
+        const location = extractCityState(publishPlaces.join(' '));
+
         return {
             title: book.title || work?.title || '',
             subtitle: book.subtitle || '',
             publish_date: book.publish_date || '',
             publish_year: book.publish_year || work?.first_publish_date || '',
             edition_name: book.edition_name || '',
+            city: location.city,
+            state: location.state,
             authors: authorRecords.filter(Boolean),
             publishers
         };
@@ -638,12 +611,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const payload = await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
         const volume = payload.items?.[0]?.volumeInfo;
         if (!volume) throw new Error('NOT_FOUND');
+        
+        const publisherInfo = volume.publisher || '';
+        const location = extractCityState(publisherInfo);
+        
         return {
             title: volume.title || '',
             subtitle: volume.subtitle || '',
             publish_date: volume.publishedDate || '',
             publish_year: volume.publishedDate || '',
             edition_name: volume.edition || '',
+            city: location.city,
+            state: location.state,
             authors: Array.isArray(volume.authors)
                 ? volume.authors.map(name => ({ name })).filter(author => author.name)
                 : [],
@@ -840,43 +819,83 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    const fetchBookMetadata = async isbn => {
-        const sources = [
-            fetchOpenLibraryEditionMetadata,
-            fetchOpenLibraryDataApiMetadata,
-            fetchOpenAlexMetadata,
-            fetchGoogleBooksMetadata,
-            fetchBookFinderMetadata,
-            fetchValoreBooksMetadata,
-            fetchPubMedMetadata,
-            fetchScienceDirectMetadata,
-            fetchIsbndbMetadata,
-            fetchAmazonBooksMetadata
-        ];
-        const collected = [];
-        let sawNetworkFailure = false;
-        for (const source of sources) {
-            try {
-                const data = await source(isbn);
-                if (data) collected.push(data);
-            } catch (error) {
-                if (error.message === 'NETWORK') {
-                    sawNetworkFailure = true;
-                }
-                continue;
-            }
+    const fetchWorldCatMetadata = async isbn => {
+        const html = await fetchHtml(`https://search.worldcat.org/search?q=bn:${isbn}`);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const first = doc.querySelector('.record, .result');
+        if (!first) throw new Error('NOT_FOUND');
+        
+        const title = first.querySelector('.title, h2')?.textContent?.trim() || '';
+        const authorText = first.querySelector('.author, .contributor')?.textContent?.trim() || '';
+        const publisherText = first.textContent || '';
+        const editionMatch = publisherText.match(/Edition:\s*([^\n]+)/i);
+        const publisherMatch = publisherText.match(/Publisher:\s*([^\n]+)/i);
+        const yearMatch = publisherText.match(/\b(19|20)\d{2}\b/);
+        
+        const publisherInfo = publisherMatch ? publisherMatch[1] : '';
+        const location = extractCityState(publisherInfo);
+        const publisherName = publisherInfo.split(',')[0].trim();
+        
+        return {
+            title,
+            subtitle: '',
+            publish_date: yearMatch ? yearMatch[0] : '',
+            publish_year: yearMatch ? yearMatch[0] : '',
+            edition_name: editionMatch ? editionMatch[1].trim() : '',
+            volume: '',
+            city: location.city,
+            state: location.state,
+            authors: authorText ? parseAuthorsFromString(authorText) : [],
+            publishers: publisherName ? [{ name: publisherName }] : []
+        };
+    };
+
+    const cityStateMap = {
+        'New York': 'NY', 'Boston': 'MA', 'Chicago': 'IL', 'Los Angeles': 'CA', 'San Francisco': 'CA',
+        'Philadelphia': 'PA', 'Seattle': 'WA', 'Austin': 'TX', 'Dallas': 'TX', 'Houston': 'TX',
+        'Miami': 'FL', 'Atlanta': 'GA', 'Denver': 'CO', 'Phoenix': 'AZ', 'Portland': 'OR',
+        'Cambridge': 'MA', 'Hoboken': 'NJ', 'Upper Saddle River': 'NJ', 'Indianapolis': 'IN'
+    };
+
+    const extractCityState = text => {
+        if (!text) return { city: '', state: '' };
+        
+        for (const [city, state] of Object.entries(cityStateMap)) {
+            const regex = new RegExp(`\\b${city}\\b`, 'i');
+            if (regex.test(text)) return { city, state };
         }
+        
+        const cityStatePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?),\s*([A-Z]{2})\b/g;
+        const matches = [...text.matchAll(cityStatePattern)];
+        if (matches.length > 0) {
+            return { city: matches[0][1].trim(), state: matches[0][2].toUpperCase() };
+        }
+        
+        return { city: '', state: '' };
+    };
 
-        const merged = mergeBookEntries(collected);
-        const hasData =
-            Boolean(merged.title) ||
-            Boolean(merged.subtitle) ||
-            Boolean(merged.publish_date) ||
-            merged.authors.length > 0;
 
-        if (hasData) return merged;
-        if (sawNetworkFailure) throw new Error('NETWORK');
-        throw new Error('NOT_FOUND');
+
+    const fetchBookMetadata = async isbn => {
+        const [google, openlib] = await Promise.allSettled([
+            fetchGoogleBooksMetadata(isbn),
+            fetchOpenLibraryEditionMetadata(isbn)
+        ]);
+        
+        const googleData = google.status === 'fulfilled' ? google.value : null;
+        const openlibData = openlib.status === 'fulfilled' ? openlib.value : null;
+        
+        const data = googleData?.title ? googleData : openlibData;
+        if (!data?.title) throw new Error('NOT_FOUND');
+        
+        return {
+            ...data,
+            city: googleData?.city || openlibData?.city || '',
+            state: googleData?.state || openlibData?.state || '',
+            edition_name: data.edition_name || '',
+            volume: data.volume || ''
+        };
     };
 
     const sentenceCase = value => {
@@ -1010,19 +1029,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const parseDatePartsValue = value => {
         if (!value) return null;
-        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        if (value instanceof Date && !isNaN(value.getTime())) {
             return {
-                day: value.getUTCDate(),
+                year: value.getUTCFullYear(),
                 month: value.getUTCMonth() + 1,
-                year: value.getUTCFullYear()
-            };
-        }
-        const date = new Date(value);
-        if (!Number.isNaN(date.getTime())) {
-            return {
-                day: date.getUTCDate(),
-                month: date.getUTCMonth() + 1,
-                year: date.getUTCFullYear()
+                day: value.getUTCDate()
             };
         }
         const yearMatch = String(value).match(/(\d{4})/);
@@ -1148,42 +1159,106 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     };
 
+    const extractJsonLd = doc => {
+        const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+        for (const script of scripts) {
+            try {
+                const data = JSON.parse(script.textContent);
+                const items = Array.isArray(data) ? data : [data];
+                for (const item of items) {
+                    if (item['@type'] === 'Article' || item['@type'] === 'NewsArticle' || item['@type'] === 'BlogPosting') {
+                        return item;
+                    }
+                }
+            } catch (e) {}
+        }
+        return null;
+    };
+
+    const extractAuthorFromJsonLd = jsonLd => {
+        if (!jsonLd?.author) return '';
+        if (typeof jsonLd.author === 'string') return jsonLd.author;
+        if (Array.isArray(jsonLd.author)) {
+            return jsonLd.author
+                .map(a => a?.name || a)
+                .filter(Boolean)
+                .join(', ');
+        }
+        return jsonLd.author.name || '';
+    };
+
+    const cleanAuthorName = name => {
+        if (!name) return '';
+        return name
+            .replace(/^By\s+/i, '')
+            .replace(/\s*\|.*$/, '')
+            .replace(/\s*,\s*(Staff|Reporter|Contributor|Writer|Editor).*$/i, '')
+            .replace(/\s+and\s+/gi, ', ')
+            .trim();
+    };
+
+    const extractAuthorsFromText = doc => {
+        const authorElements = doc.querySelectorAll('[class*="author" i], [class*="byline" i], [data-test*="author" i]');
+        const authors = [];
+        for (const el of authorElements) {
+            const text = el.textContent?.trim();
+            if (text && text.length > 2 && text.length < 100) {
+                const cleaned = cleanAuthorName(text);
+                if (cleaned && !authors.includes(cleaned)) {
+                    authors.push(cleaned);
+                }
+            }
+        }
+        return authors.join(', ');
+    };
+
     const fetchArticleMetadata = async url => {
         const html = await fetchHtml(url);
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
+        const jsonLd = extractJsonLd(doc);
+
         const metaTitle =
+            jsonLd?.headline ||
             extractMetaContent(doc, [
                 'meta[property="og:title"]',
-                'meta[name="twitter:title"]'
+                'meta[name="twitter:title"]',
+                'meta[property="twitter:title"]'
             ]);
 
         const headerTitle = (() => {
             const candidates = Array.from(
-                doc.querySelectorAll('meta[name="title"], h1, .releaseTitle, .articleTitle, .page-title, .entry-title')
+                doc.querySelectorAll('h1, .article-title, .entry-title, .post-title, .headline, [itemprop="headline"]')
             );
             const text = candidates
                 .map(node => node.textContent?.trim())
-                .find(value => value && value.length >= 20);
+                .filter(value => value && value.length >= 10 && value.length < 300)
+                .find(value => !value.toLowerCase().includes('menu') && !value.toLowerCase().includes('navigation'));
             return text || '';
         })();
 
         const title =
             metaTitle ||
-            (doc.querySelector('title')?.textContent || '').trim() ||
             headerTitle ||
+            (doc.querySelector('title')?.textContent || '').trim() ||
             fallbackTitleFromUrl(url) ||
             'Untitled article';
 
-        const author =
+        const author = cleanAuthorName(
+            extractAuthorFromJsonLd(jsonLd) ||
             extractMetaContent(doc, [
                 'meta[name="author"]',
                 'meta[property="article:author"]',
                 'meta[name="byline"]',
                 'meta[name="byl"]',
-                'meta[name="dc.creator"]'
-            ]);
+                'meta[name="dc.creator"]',
+                'meta[property="author"]',
+                'meta[itemprop="author"]'
+            ]) ||
+            extractAuthorsFromText(doc) ||
+            doc.querySelector('.author-name, .byline, .author, [rel="author"], [itemprop="author"]')?.textContent?.trim() || ''
+        );
 
         const fallbackHost = (() => {
             try {
@@ -1195,9 +1270,11 @@ document.addEventListener('DOMContentLoaded', () => {
         })();
 
         let siteName =
+            jsonLd?.publisher?.name ||
             extractMetaContent(doc, [
                 'meta[property="og:site_name"]',
-                'meta[name="application-name"]'
+                'meta[name="application-name"]',
+                'meta[property="twitter:site"]'
             ]) || fallbackHost;
 
         let normalizedTitle = title;
@@ -1210,6 +1287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const publishedRaw =
+            jsonLd?.datePublished ||
             extractMetaContent(doc, [
                 'meta[property="article:published_time"]',
                 'meta[name="article:published_time"]',
@@ -1219,8 +1297,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'meta[itemprop="datePublished"]',
                 'meta[name="dc.date"]',
                 'meta[name="dc.date.issued"]',
+                'meta[property="article:published"]',
                 'time[datetime]'
-            ]) || doc.querySelector('time')?.getAttribute('datetime');
+            ]) || doc.querySelector('time[datetime], .published-date, .post-date')?.getAttribute('datetime') ||
+            doc.querySelector('time, .published-date, .post-date')?.textContent?.trim();
 
         return {
             url,
@@ -1429,6 +1509,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const createManualDefaultsFromBook = (entry, isbn) => ({
         title: sentenceCase(entry.title || entry.subtitle || `ISBN ${isbn}`),
         publisher: parsePublisherName(entry),
+        edition: entry.edition_name || '',
+        volume: entry.volume || '',
+        city: entry.city || '',
+        state: entry.state || '',
         website: '',
         url: '',
         showUrl: false,
@@ -1714,13 +1798,43 @@ const normalizeSiteName = (siteName, url) => {
             const inText = formatManualInText(data);
             referenceOutput.value = referenceParts.plain;
             inTextOutput.value = inText;
-            addReferenceToHistory({
+            
+            const editingIndex = manualForm.dataset.editingIndex;
+            if (editingIndex !== undefined && editingIndex !== '') {
+                const index = parseInt(editingIndex, 10);
+                if (!isNaN(index) && historyEntries[index]) {
+                    historyEntries[index] = {
+                        ...historyEntries[index],
+                        reference: referenceParts.plain,
+                        display: referenceParts.html,
+                        inText,
+                        source: data,
+                        sortKey: buildSortKeyFromData(data, referenceParts.plain)
+                    };
+                    sortHistoryEntries();
+                    persistHistory();
+                    renderHistory(historyEntries[index].id);
+                    setActiveStep('output');
+                    setStatus('Citation updated successfully.', 'success');
+                    return;
+                }
+            }
+            
+            const newEntry = {
                 reference: referenceParts.plain,
                 display: referenceParts.html,
                 inText,
                 source: data,
-                sortKey: buildSortKeyFromData(data, referenceParts.plain)
-            });
+                sortKey: buildSortKeyFromData(data, referenceParts.plain),
+                createdAt: new Date().toISOString(),
+                id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
+            };
+            historyEntries.push(newEntry);
+            sortHistoryEntries();
+            persistHistory();
+            renderHistory(newEntry.id);
+            manualForm.dataset.editingIndex = String(historyEntries.findIndex(e => e.id === newEntry.id));
+            if (manualSubmitButton) manualSubmitButton.textContent = 'Update citation';
             setActiveStep('output');
             setStatus('APA citation generated and saved to history.', 'success');
         });
@@ -1748,6 +1862,8 @@ const normalizeSiteName = (siteName, url) => {
         referenceOutput.value = '';
         inTextOutput.value = '';
         resetManualForm();
+        delete manualForm.dataset.editingIndex;
+        if (manualSubmitButton) manualSubmitButton.textContent = 'Create citation';
         setActiveStep('builder');
         setStatus(DEFAULT_STATUS, 'muted');
         lookupInput.focus();
@@ -1811,6 +1927,12 @@ const normalizeSiteName = (siteName, url) => {
                     event.target.textContent = 'Copied!';
                     setTimeout(() => (event.target.textContent = original), 2000);
                 }
+            } else if (action === 'edit') {
+                resetManualForm();
+                showManualPanel({ defaults: entry.source, clear: false });
+                manualForm.dataset.editingIndex = String(index);
+                if (manualSubmitButton) manualSubmitButton.textContent = 'Update citation';
+                setStatus('Editing citation. Make changes and submit to update.', 'info');
             }
         });
     }
